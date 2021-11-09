@@ -1,0 +1,7 @@
+apiVersion: access.secure-access-cloud.symantec.com/v1
+kind: Site
+metadata:
+  name: site-sample
+spec:
+  # Add fields here
+  foo: bar

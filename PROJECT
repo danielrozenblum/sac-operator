@@ -4,4 +4,14 @@ layout:
 multigroup: true
 projectName: secure-access-cloud
 repo: bitbucket.org/accezz-io/sac-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: secure-access-cloud.symantec.com
+  group: access
+  kind: Site
+  path: bitbucket.org/accezz-io/sac-operator/apis/access/v1
+  version: v1
 version: "3"
