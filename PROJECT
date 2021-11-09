@@ -1,0 +1,7 @@
+domain: secure-access-cloud.symantec.com
+layout:
+- go.kubebuilder.io/v3
+multigroup: true
+projectName: secure-access-cloud
+repo: bitbucket.org/accezz-io/sac-operator
+version: "3"
