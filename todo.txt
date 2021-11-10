@@ -1,0 +1,3 @@
+
+- Change logger from development to production
+- Add the ability to control the log level dynamically
