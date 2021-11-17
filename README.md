@@ -56,6 +56,7 @@ This project has been initialized with the following commands:
 >> kubebuilder edit --multigroup=true 
 # create api
 >> kubebuilder create api --group access --version v1 --kind Site --resource --controller
+>> kubebuilder create api --group access --version v1 --kind Application --resource --controller
 ```
 
 ## Internal Endpoints
