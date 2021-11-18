@@ -82,6 +82,10 @@ spec:
           status:
             description: ApplicationStatus defines the observed state of Application
             properties:
+              id:
+                description: The application-id in Secure-Access-Cloud backend (if
+                  exists)
+                type: string
               modifiedOn:
                 description: Information when was the last time the application was
                   successfully modified by the operator.

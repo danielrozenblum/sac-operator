@@ -28,6 +28,12 @@ After changing any CRD implementation, you will need to generate the CRD templat
 Debug *main.go*
 
 ## Running Tests
+### Mocks
+* Install mockgen tool: `go install github.com/golang/mock/mockgen@v1.6.0`
+* Add the following annotation to your interface: `//go:generate mockery -name ApplicationService -inpkg -case=underscore -output MockApplicationService`
+* Run `make mocks`
+
+### Tests
 * Unit-Tests: `$ make test`
 * Integration-Tests: TBD
 * Running All: TBD

@@ -19,6 +19,7 @@ package v1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type ApplicationType string
@@ -104,6 +105,10 @@ type ApplicationSpec struct {
 type ApplicationStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// The application-id in Secure-Access-Cloud backend (if exists)
+	// +optional
+	Id *types.UID `json:"id,omitempty"`
 
 	// Information when was the last time the application was successfully modified by the operator.
 	// +optional

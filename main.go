@@ -17,6 +17,8 @@ limitations under the License.
 package main
 
 import (
+	"bitbucket.org/accezz-io/sac-operator/controllers/access/converter"
+	"bitbucket.org/accezz-io/sac-operator/service"
 	"flag"
 	"os"
 
@@ -86,8 +88,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&accesscontrollers.ApplicationReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:               mgr.GetClient(),
+		Scheme:               mgr.GetScheme(),
+		ApplicationConverter: converter.NewApplicationTypeConverter(),
+		ApplicationService:   service.NewDummyApplicationServiceImpl(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)

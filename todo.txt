@@ -1,3 +1,11 @@
 
 - Change logger from development to production
 - Add the ability to control the log level dynamically
+- Add webhook validation of the object
+- Fetch the exposed service reference in order to updates on the service (port, service deleted)
+
+- Generate mocks for test
+-
+
+- Integration-Tests
+- System-Tests
