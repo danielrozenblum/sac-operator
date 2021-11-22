@@ -1,0 +1,11 @@
+apiVersion: access.secure-access-cloud.symantec.com/v1
+kind: Application
+metadata:
+  name: application-sample
+spec:
+  service:
+    name: auth-service
+    portName: main
+  site: operator-site-1
+  type: HTTP
+  accessPolicies: [ rnd-policy, product-policy ]
