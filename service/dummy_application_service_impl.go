@@ -16,6 +16,11 @@ func NewDummyApplicationServiceImpl() ApplicationService {
 func (a *DummyApplicationServiceImpl) Create(ctx context.Context, applicationToCreate *model.Application) (*model.Application, error) {
 	log := logger.FromContext(ctx)
 	log.Info("Dummy Create Application")
+
+	// 1. Create Application
+	// 2. Bind to Site
+	// 3. Attach Policies
+
 	return model.NewApplicationBuilder().Build(), nil
 }
 
