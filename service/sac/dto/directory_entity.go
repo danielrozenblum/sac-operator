@@ -1,6 +1,6 @@
 package dto
 
-type DirectoryEntity struct {
+type DirectoryEntityDTO struct {
 	DisplayName          string `json:"displayName"`
 	IdentifierInProvider string `json:"identifierInProvider"`
 	IdentityProviderID   string `json:"identityProviderID"`

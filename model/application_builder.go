@@ -2,7 +2,6 @@ package model
 
 import (
 	"github.com/google/uuid"
-	"time"
 )
 
 type ApplicationBuilder struct {
@@ -10,17 +9,23 @@ type ApplicationBuilder struct {
 }
 
 func NewApplicationBuilder() *ApplicationBuilder {
+	applicationId := uuid.New()
+
 	return &ApplicationBuilder{
 		application: &Application{
-			ID:         uuid.New(),
-			Name:       "application-test",
-			CreatedOn:  time.Now(),
-			ModifiedOn: time.Now(),
+			ID:               &applicationId,
+			Name:             "application-test",
+			Type:             HTTP,
+			SubType:          DefaultSubType,
+			InternalAddress:  "http://1.1.1.1",
+			Site:             "site-test-1",
+			AccessPolicies:   []string{"access-policy-1", "access-policy-2"},
+			ActivityPolicies: []string{},
 		},
 	}
 }
 
-func (a *ApplicationBuilder) WithID(id uuid.UUID) *ApplicationBuilder {
+func (a *ApplicationBuilder) WithID(id *uuid.UUID) *ApplicationBuilder {
 	a.application.ID = id
 	return a
 }

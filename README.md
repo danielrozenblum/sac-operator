@@ -14,7 +14,9 @@ This repository using *go modules* for dependency management and using go 1.17.
 1. download dependencies:`$ go get -d ./...`
 2. build: `$ make build`
 
-After changing any CRD implementation, you will need to generate the CRD templates using `$ make manifests` and then `$ make generate`
+After changing any CRD implementation, you will need to generate the CRD templates using 
+`$ make manifests`
+`$ make generate`
 
 ## Local Development
 1. Configure your Kubernetes cluster. The simple way to configure it is by installing Docker Desktop and enable Kubernetes in the Preferences page.

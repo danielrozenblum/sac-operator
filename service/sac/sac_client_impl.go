@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"golang.org/x/oauth2/clientcredentials"
 	"gopkg.in/resty.v1"
 	"net/http"
@@ -27,33 +28,36 @@ func NewSecureAccessCloudClientImpl(setting *SecureAccessCloudSettings) SecureAc
 // Application API
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (s *SecureAccessCloudClientImpl) CreateApplication() error {
-	return nil
+func (s *SecureAccessCloudClientImpl) CreateApplication(applicationDTO *dto.ApplicationDTO) (*dto.ApplicationDTO, error) {
+	// TODO: implement
+	return nil, nil
 }
 
-func (s *SecureAccessCloudClientImpl) UpdateApplication() error {
-	return nil
+func (s *SecureAccessCloudClientImpl) UpdateApplication(applicationDTO *dto.ApplicationDTO) (*dto.ApplicationDTO, error) {
+	// TODO: implement
+	return nil, nil
 }
 
-func (s *SecureAccessCloudClientImpl) FindApplicationByName(name string) (dto.Application, error) {
+func (s *SecureAccessCloudClientImpl) FindApplicationByName(name string) (*dto.ApplicationDTO, error) {
 	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/applications" + "?filter=" + url.QueryEscape(name)
 
-	var applications dto.Applications
+	var applications dto.ApplicationPageDTO
 	err := s.performGetRequest(endpoint, &applications)
 
 	if err != nil {
-		return dto.Application{}, err
+		return &dto.ApplicationDTO{}, err
 	}
 
 	if applications.NumberOfElements == 0 {
-		return dto.Application{}, ErrorNotFound
+		return &dto.ApplicationDTO{}, ErrorNotFound
 	}
 
 	// Return the first policy if more than one found
-	return applications.Content[0], nil
+	return &applications.Content[0], nil
 }
 
-func (s *SecureAccessCloudClientImpl) DeleteApplication(id string) error {
+func (s *SecureAccessCloudClientImpl) DeleteApplication(id uuid.UUID) error {
+	// TODO: implement
 	return nil
 }
 
@@ -61,29 +65,31 @@ func (s *SecureAccessCloudClientImpl) DeleteApplication(id string) error {
 // Policy API
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (s *SecureAccessCloudClientImpl) FindPolicyByName(name string) (dto.Policy, error) {
+func (s *SecureAccessCloudClientImpl) FindPolicyByName(name string) (dto.PolicyDTO, error) {
 	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/policies" + "?filter=" + url.QueryEscape(name)
 
-	var policies dto.Policies
+	var policies dto.PoliciesPageDTO
 	err := s.performGetRequest(endpoint, &policies)
 
 	if err != nil {
-		return dto.Policy{}, err
+		return dto.PolicyDTO{}, err
 	}
 
 	if policies.NumberOfElements == 0 {
-		return dto.Policy{}, ErrorNotFound
+		return dto.PolicyDTO{}, ErrorNotFound
 	}
 
 	// Return the first policy if more than one found
 	return policies.Content[0], nil
 }
 
-func (s *SecureAccessCloudClientImpl) AddApplicationToPolicy() error {
-	return nil
+func (s *SecureAccessCloudClientImpl) FindPoliciesByNames(name []string) ([]dto.PolicyDTO, error) {
+	// TODO: implement
+	return nil, nil
 }
 
-func (s *SecureAccessCloudClientImpl) RemoveApplicationFromPolicy() error {
+func (s *SecureAccessCloudClientImpl) UpdatePolicies(applicationId uuid.UUID, policies []uuid.UUID) error {
+	// TODO: implement
 	return nil
 }
 
@@ -91,29 +97,26 @@ func (s *SecureAccessCloudClientImpl) RemoveApplicationFromPolicy() error {
 // Site API
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (s *SecureAccessCloudClientImpl) FindSiteByName(name string) (dto.Site, error) {
+func (s *SecureAccessCloudClientImpl) FindSiteByName(name string) (*dto.SiteDTO, error) {
 	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/sites" + "?filter=" + url.QueryEscape(name)
 
-	var sites dto.Sites
+	var sites dto.SitePageDTO
 	err := s.performGetRequest(endpoint, &sites)
 
 	if err != nil {
-		return dto.Site{}, err
+		return &dto.SiteDTO{}, err
 	}
 
 	if sites.NumberOfElements == 0 {
-		return dto.Site{}, ErrorNotFound
+		return &dto.SiteDTO{}, ErrorNotFound
 	}
 
 	// Return the first policy if more than one found
-	return sites.Content[0], nil
+	return &sites.Content[0], nil
 }
 
-func (s *SecureAccessCloudClientImpl) AddApplicationToSite() error {
-	return nil
-}
-
-func (s *SecureAccessCloudClientImpl) RemoveApplicationFromSite() error {
+func (s *SecureAccessCloudClientImpl) BindApplicationToSite(applicationId uuid.UUID, siteId uuid.UUID) error {
+	// TODO: implement
 	return nil
 }
 

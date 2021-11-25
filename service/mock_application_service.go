@@ -49,13 +49,13 @@ func (_m *MockApplicationService) Delete(ctx context.Context, id uuid.UUID) erro
 	return r0
 }
 
-// GetById provides a mock function with given fields: ctx, id
-func (_m *MockApplicationService) GetById(ctx context.Context, id uuid.UUID) (*model.Application, error) {
-	ret := _m.Called(ctx, id)
+// Update provides a mock function with given fields: ctx, updatedApplication
+func (_m *MockApplicationService) Update(ctx context.Context, updatedApplication *model.Application) (*model.Application, error) {
+	ret := _m.Called(ctx, updatedApplication)
 
 	var r0 *model.Application
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *model.Application); ok {
-		r0 = rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Application) *model.Application); ok {
+		r0 = rf(ctx, updatedApplication)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*model.Application)
@@ -63,31 +63,8 @@ func (_m *MockApplicationService) GetById(ctx context.Context, id uuid.UUID) (*m
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// Update provides a mock function with given fields: ctx, id, updatedApplication
-func (_m *MockApplicationService) Update(ctx context.Context, id uuid.UUID, updatedApplication *model.Application) (*model.Application, error) {
-	ret := _m.Called(ctx, id, updatedApplication)
-
-	var r0 *model.Application
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *model.Application) *model.Application); ok {
-		r0 = rf(ctx, id, updatedApplication)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*model.Application)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, *model.Application) error); ok {
-		r1 = rf(ctx, id, updatedApplication)
+	if rf, ok := ret.Get(1).(func(context.Context, *model.Application) error); ok {
+		r1 = rf(ctx, updatedApplication)
 	} else {
 		r1 = ret.Error(1)
 	}

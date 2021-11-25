@@ -1,18 +1,20 @@
 package sac
 
-import "bitbucket.org/accezz-io/sac-operator/service/sac/dto"
+import (
+	"bitbucket.org/accezz-io/sac-operator/service/sac/dto"
+	"github.com/google/uuid"
+)
 
 type SecureAccessCloudClient interface {
-	CreateApplication() error
-	UpdateApplication() error
-	FindApplicationByName(name string) (dto.Application, error)
-	DeleteApplication(id string) error
+	CreateApplication(applicationDTO *dto.ApplicationDTO) (*dto.ApplicationDTO, error)
+	UpdateApplication(applicationDTO *dto.ApplicationDTO) (*dto.ApplicationDTO, error)
+	FindApplicationByName(name string) (*dto.ApplicationDTO, error)
+	DeleteApplication(id uuid.UUID) error
 
-	FindPolicyByName(name string) (dto.Policy, error)
-	AddApplicationToPolicy() error
-	RemoveApplicationFromPolicy() error
+	FindPolicyByName(name string) (dto.PolicyDTO, error)
+	FindPoliciesByNames(name []string) ([]dto.PolicyDTO, error)
+	UpdatePolicies(applicationId uuid.UUID, policies []uuid.UUID) error
 
-	FindSiteByName(name string) (dto.Site, error)
-	AddApplicationToSite() error
-	RemoveApplicationFromSite() error
+	FindSiteByName(name string) (*dto.SiteDTO, error)
+	BindApplicationToSite(applicationId uuid.UUID, siteId uuid.UUID) error
 }
