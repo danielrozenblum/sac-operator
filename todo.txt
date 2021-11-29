@@ -4,8 +4,10 @@
 - Add webhook validation of the object
 - Fetch the exposed service reference in order to updates on the service (port, service deleted)
 
-- Generate mocks for test
--
+- Unit-Tests:
+    - ApplicationTypeConverter
 
 - Integration-Tests
+    - ApplicationController
+    - SecureAccessCloudClientTest
 - System-Tests

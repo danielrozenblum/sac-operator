@@ -62,6 +62,10 @@ spec:
                     description: The port name that will be exposed by this application.
                     minLength: 0
                     type: string
+                  schema:
+                    description: Protocol Schema (default is based on port and application
+                      type)
+                    type: string
                 type: object
               site:
                 description: The site to bind this application. The site should be

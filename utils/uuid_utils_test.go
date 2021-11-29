@@ -43,3 +43,15 @@ func TestFromUUID(t *testing.T) {
 	assert.NotEmpty(t, result)
 	assert.Equal(t, id.String(), string(*result))
 }
+
+func TestFromString(t *testing.T) {
+	// given
+	valueAsStr := "81399e0b-3981-4f3e-82cf-6c51067629fe"
+
+	// when
+	result, err := FromString(valueAsStr)
+
+	// then
+	assert.NoError(t, err)
+	assert.Equal(t, valueAsStr, result.String())
+}

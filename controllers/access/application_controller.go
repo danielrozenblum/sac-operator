@@ -21,6 +21,7 @@ import (
 	"bitbucket.org/accezz-io/sac-operator/model"
 	"bitbucket.org/accezz-io/sac-operator/service"
 	"bitbucket.org/accezz-io/sac-operator/utils"
+	"bitbucket.org/accezz-io/sac-operator/utils/typederror"
 	"context"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,6 +38,13 @@ type ApplicationReconciler struct {
 	Scheme               *runtime.Scheme
 	ApplicationService   service.ApplicationService
 	ApplicationConverter *converter.ApplicationTypeConverter
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&accessv1.Application{}).
+		Complete(r)
 }
 
 //+kubebuilder:rbac:groups=access.secure-access-cloud.symantec.com,resources=applications,verbs=get;list;watch;create;update;patch;delete
@@ -67,7 +75,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
-		// TODO should delete application here? if the application not found does it means it got deleted?
+		// TODO should delete application here? or use finalizers?
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -75,29 +83,32 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// 	2.1. In case not found, create the application (application-id not found on the status)
 	if application.Status.Id == nil {
 		var err error
-		applicationModel := r.ApplicationConverter.ConvertToModel(application)
-		updatedApplicationOnSac, err = r.ApplicationService.Create(ctx, applicationModel)
+		applicationModel, err := r.ApplicationConverter.ConvertToModel(application)
 		if err != nil {
-			return ctrl.Result{}, err
+			return r.handleError(err)
+		}
+
+		updatedApplicationOnSac, err = r.ApplicationService.Create(ctx, applicationModel)
+		if err != nil && !typederror.IsErrorType(typederror.PartiallySuccessError, err) {
+			return r.handleError(err)
 		}
 	} else {
 		//	2.2. In case found, compare the application configured on Secure-Access-Cloud to the desired state in the spec
-		applicationId, err := utils.FromUIDType(application.Status.Id)
+		applicationModel, err := r.ApplicationConverter.ConvertToModel(application)
 		if err != nil {
-			return ctrl.Result{}, err
+			return r.handleError(err)
 		}
 
-		applicationModel := r.ApplicationConverter.ConvertToModel(application)
-		updatedApplicationOnSac, err = r.ApplicationService.Update(ctx, applicationId, applicationModel)
-		if err != nil {
-			return ctrl.Result{}, err
+		updatedApplicationOnSac, err = r.ApplicationService.Update(ctx, applicationModel)
+		if err != nil && !typederror.IsErrorType(typederror.PartiallySuccessError, err) {
+			return r.handleError(err)
 		}
 	}
 
 	// 3. Update the application status
 	err := r.updateApplicationState(ctx, log, &application, updatedApplicationOnSac)
 	if err != nil {
-		return ctrl.Result{}, err
+		return r.handleError(err)
 	}
 
 	// TODO: fetch the exposed service reference in order to updates on the service (port, service deleted)
@@ -117,19 +128,22 @@ func (r *ApplicationReconciler) updateApplicationState(
 	application *accessv1.Application,
 	updatedApplicationOnSac *model.Application,
 ) error {
-	application.Status.Id = utils.FromUUID(updatedApplicationOnSac.ID)
+	if updatedApplicationOnSac.ID != nil {
+		application.Status.Id = utils.FromUUID(*updatedApplicationOnSac.ID)
 
-	if err := r.Status().Update(ctx, application); err != nil {
-		log.Error(err, "unable to update Application status")
-		return err
+		if err := r.Status().Update(ctx, application); err != nil {
+			log.Error(err, "unable to update Application status")
+			return err
+		}
 	}
 
 	return nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&accessv1.Application{}).
-		Complete(r)
+func (r *ApplicationReconciler) handleError(err error) (ctrl.Result, error) {
+	if err != nil && typederror.IsErrorType(typederror.UnrecoverableError, err) {
+		return ctrl.Result{Requeue: false}, err
+	}
+
+	return ctrl.Result{Requeue: true}, err
 }
