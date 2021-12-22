@@ -21,9 +21,9 @@ func (a *ApplicationTypeConverter) ConvertToModel(application accessv1.Applicati
 		return nil, typederror.WrapError(typederror.UnrecoverableError, err)
 	}
 
-	applicationName := utils.GetValueOrDefault(application.Spec.Name, application.Namespace+"-"+application.Spec.Service.Name).(string)
-	applicationType := utils.GetValueOrDefault(application.Spec.Type, model.DefaultType).(model.ApplicationType)
-	applicationSubType := utils.GetValueOrDefault(application.Spec.SubType, model.DefaultSubType).(model.ApplicationSubType)
+	applicationName := utils.GetStringPtrValueOrDefault(application.Spec.Name, application.Namespace+"-"+application.Spec.Service.Name)
+	applicationType := utils.GetApplicationTypeOrDefault(application.Spec.Type, model.DefaultType)
+	applicationSubType := utils.GetApplicationSubTypeOrDefault(application.Spec.SubType, model.DefaultSubType)
 
 	return &model.Application{
 		ID:               applicationId,
@@ -38,7 +38,8 @@ func (a *ApplicationTypeConverter) ConvertToModel(application accessv1.Applicati
 }
 
 func (a *ApplicationTypeConverter) convertToValidSACApplicationName(value string) string {
-	result := strings.ReplaceAll(" ", "-", value)
+	result := strings.ReplaceAll(value, " ", "-")
+
 	if len(result) > 64 {
 		return result[0:63]
 	}

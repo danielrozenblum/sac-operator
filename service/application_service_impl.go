@@ -58,7 +58,7 @@ func (a *ApplicationServiceImpl) Create(ctx context.Context, applicationToCreate
 	}
 
 	// 5. Convert back to model
-	result := dto.ToApplicationModel(createdApplicationDTO)
+	result := dto.ToApplicationModel(createdApplicationDTO, site.ID.String())
 
 	// 6. Bind Site & Policies (Idempotent)
 	err = a.bindSiteAndPolicies(result, site, policies)
@@ -87,14 +87,18 @@ func (a *ApplicationServiceImpl) Update(ctx context.Context, updatedApplication 
 	}
 
 	// 3. Update Application
-	applicationDTO := dto.FromApplicationModel(updatedApplication)
+	applicationDTO, err := a.CompleteApplication(ctx, updatedApplication)
+	if err != nil {
+		return nil, err
+	}
+
 	updatedApplicationDTO, err := a.sacClient.UpdateApplication(applicationDTO)
 	if err != nil {
 		return nil, err
 	}
 
 	// 4. Convert back to model
-	result := dto.ToApplicationModel(updatedApplicationDTO)
+	result := dto.ToApplicationModel(updatedApplicationDTO, site.ID.String())
 
 	// 5. Bind Site & Policies (Idempotent)
 	err = a.bindSiteAndPolicies(result, site, policies)
@@ -103,6 +107,22 @@ func (a *ApplicationServiceImpl) Update(ctx context.Context, updatedApplication 
 	}
 
 	return result, nil
+}
+
+func (a *ApplicationServiceImpl) CompleteApplication(ctx context.Context, updatedApplication *model.Application) (*dto.ApplicationDTO, error) {
+	// The application entity in SAC might contain additional attributes which are unknown or not related to this
+	// operator. Instead of sending the updated application received from the operator, this function first fetch the
+	// existing application in SAC and merge the updated application data to it in order not to override attributes
+	// which have been updated in SAC but is not related here.
+	foundApplicationDTO, err := a.sacClient.FindApplicationByID(*updatedApplication.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedApplicationDTO := dto.FromApplicationModel(updatedApplication)
+	mergedApplicationDTO := dto.MergeApplication(foundApplicationDTO, updatedApplicationDTO)
+
+	return mergedApplicationDTO, nil
 }
 
 func (a *ApplicationServiceImpl) Delete(ctx context.Context, id uuid.UUID) error {
@@ -134,7 +154,7 @@ func (a *ApplicationServiceImpl) bindSiteAndPolicies(
 	for _, policy := range policies {
 		policyIds = append(policyIds, *policy.ID)
 	}
-	err = a.sacClient.UpdatePolicies(*application.ID, policyIds)
+	err = a.sacClient.UpdatePolicies(*application.ID, application.Type, policyIds)
 	if err != nil {
 		return typederror.WrapError(typederror.PartiallySuccessError, err)
 	}
