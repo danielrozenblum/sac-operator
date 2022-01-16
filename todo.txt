@@ -1,13 +1,15 @@
 
-- Change logger from development to production
+- Change logger from development to production level
 - Add the ability to control the log level dynamically
 - Add webhook validation of the object
-- Fetch the exposed service reference in order to updates on the service (port, service deleted)
+- How to get notification on application CRD deletion? finalizers?
+- Fetch the exposed service CRD referenced in order to get updates on the service (port, service deleted)
 
 - Unit-Tests:
-    - ApplicationTypeConverter
+    - ApplicationServiceImpl
 
 - Integration-Tests
     - ApplicationController
-    - SecureAccessCloudClientTest
+    - SecureAccessCloudClient
+
 - System-Tests

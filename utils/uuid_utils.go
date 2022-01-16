@@ -25,3 +25,12 @@ func FromUUID(id uuid.UUID) *types.UID {
 func FromString(valueAsStr string) (uuid.UUID, error) {
 	return uuid.Parse(valueAsStr)
 }
+
+func ToStringArray(policyIDs []uuid.UUID) []string {
+	var policyIDsAsString []string
+	for _, policyID := range policyIDs {
+		policyIDsAsString = append(policyIDsAsString, policyID.String())
+	}
+
+	return policyIDsAsString
+}
