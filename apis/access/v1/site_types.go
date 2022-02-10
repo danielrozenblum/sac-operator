@@ -18,6 +18,7 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -28,14 +29,27 @@ type SiteSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Site. Edit site_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Name is an example field of Site. Edit site_types.go to remove/update
+	TenantIdentifier    string `json:"tenant_identifier"`
+	NumberOfConnectors  int    `json:"number_of_connectors"`
+	ConnectorsNamespace string `json:"connectors_namespace"`
+	EndpointURL         string `json:"endpoint_url"`
+	SacSecretName       string `json:"sac_secret_name"`
+}
+
+type Connector struct {
+	ConnectorID     *types.UID `json:"connector_id"`
+	PodID           *types.UID `json:"pod_id"`
+	Name            string     `json:"name"`
+	ConnectorStatus string     `json:"connector_status"`
 }
 
 // SiteStatus defines the observed state of Site
 type SiteStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	ID         *types.UID  `json:"id"`
+	Connectors []Connector `json:"connectors"`
 }
 
 //+kubebuilder:object:root=true

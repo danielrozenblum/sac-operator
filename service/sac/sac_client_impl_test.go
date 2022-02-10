@@ -1,9 +1,15 @@
 package sac
 
 import (
-	"bitbucket.org/accezz-io/sac-operator/utils"
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/util/rand"
+
+	"bitbucket.org/accezz-io/sac-operator/service/sac/dto"
+	"github.com/google/uuid"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var sacClientTest *SecureAccessCloudClientTest
@@ -14,9 +20,12 @@ type SecureAccessCloudClientTest struct {
 
 func (f *SecureAccessCloudClientTest) setup(t *testing.T) func(t *testing.T) {
 	settings := &SecureAccessCloudSettings{
-		ClientID:     utils.GetMandatoryEnvironmentVariable(t, "SAC_CLIENT_ID"),
-		ClientSecret: utils.GetMandatoryEnvironmentVariable(t, "SAC_CLIENT_SECRET"),
-		TenantDomain: utils.GetMandatoryEnvironmentVariable(t, "SAC_TENANT_DOMAIN"),
+		//ClientID:     utils.GetMandatoryEnvironmentVariable(t, "SAC_CLIENT_ID"),
+		//ClientSecret: utils.GetMandatoryEnvironmentVariable(t, "SAC_CLIENT_SECRET"),
+		//TenantDomain: utils.GetMandatoryEnvironmentVariable(t, "SAC_TENANT_DOMAIN"),
+		ClientID:     "a0090f01e9d27ffd82f4981c39a65392",
+		ClientSecret: "f38b35a2e4eae78cbc85cc2ad745c6db5fdad6d179144279726ddfbd6112af02",
+		TenantDomain: "symchatbotdemo.luminatesite.com",
 	}
 
 	sacClient := NewSecureAccessCloudClientImpl(settings)
@@ -82,4 +91,38 @@ func TestFindSiteByNameWhenNotFound(t *testing.T) {
 	// then
 	assert.Error(t, err)
 	assert.Equal(t, ErrorNotFound, err)
+}
+
+func TestCreateSite(t *testing.T) {
+	// given
+	tearDown := sacClientTest.setup(t)
+	randomSiteName := fmt.Sprintf("create-site-%s", rand.String(4))
+	site := &dto.SiteDTO{}
+	defer func() {
+		err := sacClientTest.client.DeleteSite(*site.ID)
+		if err != nil {
+			t.Errorf("failed deleteing site %+v", site)
+		}
+	}()
+	defer tearDown(t)
+
+	// when
+	site, err := sacClientTest.client.CreateSite(&dto.SiteDTO{
+		ID:   &uuid.UUID{},
+		Name: randomSiteName,
+	})
+
+	// then
+	assert.NoError(t, err)
+	assert.NotEmpty(t, site)
+	assert.Equal(t, randomSiteName, site.Name)
+
+	// when
+	connector := &dto.Connector{}
+	connector, err = sacClientTest.client.CreateConnector(site)
+	// then
+	assert.NoError(t, err)
+	assert.NotEmpty(t, connector)
+	assert.NotEmpty(t, connector.Otp)
+
 }

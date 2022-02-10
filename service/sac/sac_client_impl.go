@@ -1,19 +1,23 @@
 package sac
 
 import (
-	"bitbucket.org/accezz-io/sac-operator/service/sac/dto"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
-	"golang.org/x/oauth2/clientcredentials"
-	"gopkg.in/resty.v1"
 	"net/http"
 	"net/url"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/rand"
+
+	"bitbucket.org/accezz-io/sac-operator/service/sac/dto"
+	"github.com/google/uuid"
+	"golang.org/x/oauth2/clientcredentials"
+	"gopkg.in/resty.v1"
 )
 
-var ErrorNotFound = fmt.Errorf("permission denied")
+var ErrorPermissionDenied = fmt.Errorf("permission denied")
+var ErrorNotFound = fmt.Errorf("not found")
 
 type SecureAccessCloudClientImpl struct {
 	Setting *SecureAccessCloudSettings
@@ -97,27 +101,70 @@ func (s *SecureAccessCloudClientImpl) UpdatePolicies(applicationId uuid.UUID, po
 // Site API
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+func (s *SecureAccessCloudClientImpl) CreateSite(siteDTO *dto.SiteDTO) (*dto.SiteDTO, error) {
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/sites"
+
+	site := &dto.SiteDTO{}
+	err := s.performPostRequest(endpoint, siteDTO, site)
+	if err != nil {
+		return &dto.SiteDTO{}, err
+	}
+
+	return site, nil
+}
+func (s *SecureAccessCloudClientImpl) DeleteSite(id uuid.UUID) error {
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/sites/" + id.String()
+
+	return s.performDeleteRequest(endpoint)
+
+}
 func (s *SecureAccessCloudClientImpl) FindSiteByName(name string) (*dto.SiteDTO, error) {
 	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/sites" + "?filter=" + url.QueryEscape(name)
 
-	var sites dto.SitePageDTO
-	err := s.performGetRequest(endpoint, &sites)
+	var pageDTO dto.SitePageDTO
+
+	err := s.performGetRequest(endpoint, &pageDTO)
 
 	if err != nil {
 		return &dto.SiteDTO{}, err
 	}
 
-	if sites.NumberOfElements == 0 {
+	if pageDTO.NumberOfElements == 0 {
 		return &dto.SiteDTO{}, ErrorNotFound
 	}
 
 	// Return the first policy if more than one found
-	return &sites.Content[0], nil
+	return &pageDTO.Content[0], nil
 }
-
 func (s *SecureAccessCloudClientImpl) BindApplicationToSite(applicationId uuid.UUID, siteId uuid.UUID) error {
 	// TODO: implement
 	return nil
+}
+
+func (s *SecureAccessCloudClientImpl) CreateConnector(siteDTO *dto.SiteDTO) (*dto.Connector, error) {
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/connectors?bind_to_site_id=" + siteDTO.ID.String()
+
+	connector := &dto.Connector{
+		Name:           fmt.Sprintf("%s-%s", siteDTO.Name, rand.String(3)),
+		DeploymentType: "linux",
+	}
+
+	err := s.performPostRequest(endpoint, connector, connector)
+	if err != nil {
+		return &dto.Connector{}, err
+	}
+
+	return connector, nil
+}
+
+func (s *SecureAccessCloudClientImpl) ListConnectorsBySite(siteName string) ([]dto.ConnectorPageDTO, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *SecureAccessCloudClientImpl) DeleteConnector(connectorID uuid.UUID) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -172,6 +219,46 @@ func (s *SecureAccessCloudClientImpl) performGetRequest(endpoint string, obj int
 	err = json.Unmarshal(response.Body(), &obj)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *SecureAccessCloudClientImpl) performPostRequest(endpoint string, body, obj interface{}) error {
+	// 1. Get Authorization Token
+	client := s.getClient()
+
+	// 2. Perform the POST request
+	response, err := client.NewRequest().SetBody(body).Post(endpoint)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode() != http.StatusCreated {
+		return fmt.Errorf("failed with status-code: %d and body: %s", response.StatusCode(), response.String())
+	}
+
+	// 3. Convert to Commit model
+	err = json.Unmarshal(response.Body(), obj)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *SecureAccessCloudClientImpl) performDeleteRequest(endpoint string) error {
+	// 1. Get Authorization Token
+	client := s.getClient()
+
+	// 2. Perform the DELETE request
+	response, err := client.NewRequest().Delete(endpoint)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode() != http.StatusNoContent {
+		return fmt.Errorf("failed with status-code: %d and body: %s", response.StatusCode(), response.String())
 	}
 
 	return nil

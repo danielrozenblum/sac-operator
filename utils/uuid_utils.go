@@ -22,6 +22,21 @@ func FromUUID(id uuid.UUID) *types.UID {
 	return &result
 }
 
+func FromUUIDS(ids []*uuid.UUID) []types.UID {
+	var result []types.UID
+	for i := range ids {
+		result = append(result, types.UID(ids[i].String()))
+	}
+
+	return result
+}
+
 func FromString(valueAsStr string) (uuid.UUID, error) {
 	return uuid.Parse(valueAsStr)
+}
+
+func FromInt64(i int64) *int64 {
+
+	return &i
+
 }

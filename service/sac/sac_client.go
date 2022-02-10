@@ -16,5 +16,11 @@ type SecureAccessCloudClient interface {
 	UpdatePolicies(applicationId uuid.UUID, policies []uuid.UUID) error
 
 	FindSiteByName(name string) (*dto.SiteDTO, error)
+	CreateSite(siteDTO *dto.SiteDTO) (*dto.SiteDTO, error)
+	DeleteSite(id uuid.UUID) error
 	BindApplicationToSite(applicationId uuid.UUID, siteId uuid.UUID) error
+
+	CreateConnector(*dto.SiteDTO) (*dto.Connector, error)
+	ListConnectorsBySite(siteName string) ([]dto.ConnectorPageDTO, error)
+	DeleteConnector(connectorID uuid.UUID) error
 }

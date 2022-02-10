@@ -17,10 +17,15 @@ limitations under the License.
 package main
 
 import (
-	"bitbucket.org/accezz-io/sac-operator/controllers/access/converter"
-	"bitbucket.org/accezz-io/sac-operator/service"
 	"flag"
 	"os"
+
+	connectordeployer "bitbucket.org/accezz-io/sac-operator/service/connector-deployer"
+
+	"bitbucket.org/accezz-io/sac-operator/service/sac"
+
+	"bitbucket.org/accezz-io/sac-operator/controllers/access/converter"
+	"bitbucket.org/accezz-io/sac-operator/service"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -54,6 +59,11 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var configFile string
+	flag.StringVar(&configFile, "config", "",
+		"The controller will load its initial configuration from this file. "+
+			"Omit this flag to use the default configuration values. "+
+			"Command-line flags override configuration from this file.")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -67,22 +77,44 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	options := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "515d9663.secure-access-cloud.symantec.com",
-	})
+	}
+
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
+	if configFile != "" {
+		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile))
+		if err != nil {
+			setupLog.Error(err, "unable to load the config file")
+			os.Exit(1)
+		}
+	}
+
+	sacService := sac.NewSecureAccessCloudClientImpl(
+		&sac.SecureAccessCloudSettings{
+			ClientID:     "c7e8b05aada8db0980986a2d92e41d63",
+			ClientSecret: "2de3de254b03861065ce286da87a2584b279a27b7c85615332e29ed8d5d1bf7a",
+			TenantDomain: "symchatbotdemo.luminatesite.com",
+		},
+	)
+
+	connectorDeployer := connectordeployer.NewKubernetesImpl(mgr.GetClient(), mgr.GetScheme())
+
 	if err = (&accesscontrollers.SiteReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		SiteService:   service.NewSiteServiceImpl(sacService, connectorDeployer),
+		SiteConverter: converter.NewSiteConverter(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Site")
 		os.Exit(1)

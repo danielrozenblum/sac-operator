@@ -36,13 +36,59 @@ spec:
           spec:
             description: SiteSpec defines the desired state of Site
             properties:
-              foo:
-                description: Foo is an example field of Site. Edit site_types.go to
-                  remove/update
+              connectors_namespace:
                 type: string
+              endpoint_url:
+                type: string
+              number_of_connectors:
+                type: integer
+              tenant_identifier:
+                description: Name is an example field of Site. Edit site_types.go
+                  to remove/update
+                type: string
+            required:
+            - connectors_namespace
+            - endpoint_url
+            - number_of_connectors
+            - tenant_identifier
             type: object
           status:
             description: SiteStatus defines the observed state of Site
+            properties:
+              connectors:
+                items:
+                  properties:
+                    connector_id:
+                      description: UID is a type that holds unique ID values, including
+                        UUIDs.  Because we don't ONLY use UUIDs, this is an alias
+                        to string.  Being a type captures intent and helps make sure
+                        that UIDs and names do not get conflated.
+                      type: string
+                    connector_status:
+                      type: string
+                    name:
+                      type: string
+                    pod_id:
+                      description: UID is a type that holds unique ID values, including
+                        UUIDs.  Because we don't ONLY use UUIDs, this is an alias
+                        to string.  Being a type captures intent and helps make sure
+                        that UIDs and names do not get conflated.
+                      type: string
+                  required:
+                  - connector_id
+                  - connector_status
+                  - name
+                  - pod_id
+                  type: object
+                type: array
+              id:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                  of cluster Important: Run "make" to regenerate code after modifying
+                  this file'
+                type: string
+            required:
+            - connectors
+            - id
             type: object
         type: object
     served: true
