@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	accessv1 "bitbucket.org/accezz-io/sac-operator/apis/access/v1"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -28,7 +30,16 @@ func NewKubernetesImpl(client client.Client, scheme *runtime.Scheme) *Kubernetes
 }
 
 func (k *KubernetesImpl) Deploy(ctx context.Context, inputs *DeployConnectorInput) (*DeployConnectorOutput, error) {
-	pod, err := k.getConnectorPodForSite(inputs)
+
+	site := &accessv1.Site{}
+	if err := k.Get(context.Background(), client.ObjectKey{
+		Namespace: inputs.SiteNamespace,
+		Name:      inputs.SiteName,
+	}, site); err != nil {
+		return nil, err
+	}
+
+	pod, err := k.getConnectorPodForSite(inputs, site)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +56,7 @@ func (k *KubernetesImpl) Deploy(ctx context.Context, inputs *DeployConnectorInpu
 	return &DeployConnectorOutput{DeploymentID: uid}, nil
 }
 
-func (k *KubernetesImpl) getConnectorPodForSite(inputs *DeployConnectorInput) (*corev1.Pod, error) {
+func (k *KubernetesImpl) getConnectorPodForSite(inputs *DeployConnectorInput, site *accessv1.Site) (*corev1.Pod, error) {
 
 	podEnvVar := []corev1.EnvVar{}
 
@@ -81,7 +92,7 @@ func (k *KubernetesImpl) getConnectorPodForSite(inputs *DeployConnectorInput) (*
 		},
 	}
 
-	err := ctrl.SetControllerReference(inputs.Site, pod, k.Scheme)
+	err := ctrl.SetControllerReference(site, pod, k.Scheme)
 	if err != nil {
 		return nil, err
 	}

@@ -110,7 +110,7 @@ func main() {
 
 	connectorDeployer := connectordeployer.NewKubernetesImpl(mgr.GetClient(), mgr.GetScheme())
 
-	if err = (&accesscontrollers.SiteReconciler{
+	if err = (&accesscontrollers.SiteReconcile{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
 		SiteService:   service.NewSiteServiceImpl(sacService, connectorDeployer),
@@ -144,4 +144,5 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+
 }

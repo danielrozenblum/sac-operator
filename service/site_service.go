@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 
-	accessv1 "bitbucket.org/accezz-io/sac-operator/apis/access/v1"
-
 	"github.com/google/uuid"
 
 	"errors"
@@ -15,6 +13,7 @@ import (
 var SiteAlreadyExist = errors.New("site already exist")
 
 type SiteService interface {
-	Create(ctx context.Context, site *model.Site, siteCRD *accessv1.Site) error
+	Create(ctx context.Context, site *model.Site) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	Reconcile(ctx context.Context, site *model.Site) error
 }

@@ -26,6 +26,7 @@ func (s *SiteConverter) ConvertToServiceModel(site *accessv1.Site) (*model.Site,
 		NumberOfConnectors:  site.Spec.NumberOfConnectors,
 		ConnectorsNamespace: site.Spec.ConnectorsNamespace,
 		EndpointURL:         site.Spec.EndpointURL,
+		SiteNamespace:       site.Namespace,
 	}
 	connectors := []model.Connector{}
 
@@ -35,9 +36,8 @@ func (s *SiteConverter) ConvertToServiceModel(site *accessv1.Site) (*model.Site,
 			return nil, err2
 		}
 		connectors = append(connectors, model.Connector{
-			ConnectorID:     connectorUUID,
-			Name:            connector.Name,
-			ConnectorStatus: connector.ConnectorStatus,
+			ConnectorID: connectorUUID,
+			Name:        connector.Name,
 		})
 	}
 
@@ -54,10 +54,9 @@ func (s *SiteConverter) UpdateStatus(siteModel *model.Site, site *accessv1.SiteS
 		connectorID := utils.FromUUID(*siteModel.Connectors[i].ConnectorID)
 		podID := utils.FromUUID(*siteModel.Connectors[i].ConnectorDeploymentID)
 		connectors = append(connectors, accessv1.Connector{
-			ConnectorID:     connectorID,
-			PodID:           podID,
-			Name:            siteModel.Connectors[i].Name,
-			ConnectorStatus: siteModel.Connectors[i].ConnectorStatus,
+			ConnectorID: connectorID,
+			PodID:       podID,
+			Name:        siteModel.Connectors[i].Name,
 		})
 	}
 

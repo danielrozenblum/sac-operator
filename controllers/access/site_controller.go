@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	corev1 "k8s.io/api/core/v1"
 
 	"bitbucket.org/accezz-io/sac-operator/controllers/access/converter"
@@ -34,8 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// SiteReconciler reconciles a Site object
-type SiteReconciler struct {
+// SiteReconcile reconciles a Site object
+type SiteReconcile struct {
 	client.Client
 	Scheme        *runtime.Scheme
 	SiteService   service.SiteService
@@ -55,45 +57,89 @@ type SiteReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
-func (r *SiteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *SiteReconcile) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logger.FromContext(ctx).WithValues("sac-site spec", req.NamespacedName)
 
 	siteCRD := &accessv1.Site{}
+	connectorList := &corev1.PodList{}
 
 	if err := r.Get(ctx, req.NamespacedName, siteCRD); err != nil {
 		log.Error(err, "unable to fetch site")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	if err := r.List(ctx, connectorList, client.InNamespace(siteCRD.Spec.ConnectorsNamespace), client.MatchingFields{podOwnerKey: req.Name}); err != nil {
+		log.Error(err, "unable to list pods Jobs")
+		return ctrl.Result{}, err
+	}
+
+	log.WithValues("siteCRD", siteCRD, "connectorList", connectorList).Info("got triggered")
+
 	switch {
 	case siteCRD.Status.ID == nil:
-		siteModel, err := r.SiteConverter.ConvertToServiceModel(siteCRD)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		err = r.SiteService.Create(ctx, siteModel, siteCRD)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		err = r.SiteConverter.UpdateStatus(siteModel, &siteCRD.Status)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if err = r.Status().Update(ctx, siteCRD); err != nil {
-			log.Error(err, "unable to update siteCRD status")
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{
-			Requeue:      true,
-			RequeueAfter: 30 * time.Second,
-		}, nil
+		return r.CreateSite(ctx, siteCRD)
+	default:
+		return r.ReconcileConnectors(ctx, siteCRD, connectorList)
 	}
+
+}
+
+func (r *SiteReconcile) CreateSite(ctx context.Context, siteCRD *accessv1.Site) (ctrl.Result, error) {
+	log := logger.FromContext(ctx).WithValues("creating site", siteCRD.Name)
+
+	siteModel, err := r.SiteConverter.ConvertToServiceModel(siteCRD)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	err = r.SiteService.Create(ctx, siteModel)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	err = r.SiteConverter.UpdateStatus(siteModel, &siteCRD.Status)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if err = r.Status().Update(ctx, siteCRD); err != nil {
+		log.Error(err, "unable to update siteCRD status")
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{
+		Requeue:      true,
+		RequeueAfter: 30 * time.Second,
+	}, nil
+}
+
+func (r *SiteReconcile) ReconcileConnectors(ctx context.Context, siteCRD *accessv1.Site, connectorList *corev1.PodList) (ctrl.Result, error) {
+	_ = logger.FromContext(ctx).WithValues("ReconcileConnectors for site", siteCRD.Name)
 
 	return ctrl.Result{}, nil
 }
 
+var (
+	podOwnerKey = ".metadata.controller"
+	apiGVStr    = accessv1.GroupVersion.String()
+)
+
 // SetupWithManager sets up the controller with the Manager.
-func (r *SiteReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *SiteReconcile) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Pod{}, podOwnerKey, func(rawObj client.Object) []string {
+		// grab the pod object, extract the owner...
+		pod := rawObj.(*corev1.Pod)
+		owner := metav1.GetControllerOf(pod)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a Site...
+		if owner.APIVersion != apiGVStr || owner.Kind != "Site" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&accessv1.Site{}).
 		Owns(&corev1.Pod{}).

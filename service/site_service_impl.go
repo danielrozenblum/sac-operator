@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 
-	accessv1 "bitbucket.org/accezz-io/sac-operator/apis/access/v1"
-
 	connector_deployer "bitbucket.org/accezz-io/sac-operator/service/connector-deployer"
 
 	"bitbucket.org/accezz-io/sac-operator/model"
@@ -39,8 +37,7 @@ func (s *SiteServiceImpl) isSiteExist(ctx context.Context, name string) (bool, e
 	return true, nil
 }
 
-func (s *SiteServiceImpl) Create(ctx context.Context, site *model.Site, siteCRD *accessv1.Site) error {
-
+func (s *SiteServiceImpl) Create(ctx context.Context, site *model.Site) error {
 	sacSite := dto.FromSiteModel(site)
 	siteDto, err := s.sacClient.CreateSite(sacSite)
 	if err != nil {
@@ -54,7 +51,7 @@ func (s *SiteServiceImpl) Create(ctx context.Context, site *model.Site, siteCRD 
 		if err != nil {
 			return err
 		}
-		deployConnectorInput, err := s.getDeployConnectorInputs(connector, site, siteCRD)
+		deployConnectorInput, err := s.getDeployConnectorInputs(connector, site)
 		if err != nil {
 			return err
 		}
@@ -68,9 +65,17 @@ func (s *SiteServiceImpl) Create(ctx context.Context, site *model.Site, siteCRD 
 			ConnectorID:           deployConnectorInput.ConnectorID,
 			ConnectorDeploymentID: deployConnectorOutput.DeploymentID,
 			Name:                  deployConnectorInput.Name,
-			ConnectorStatus:       deployConnectorOutput.Status,
 		})
 	}
+
+	return nil
+
+}
+
+func (s *SiteServiceImpl) Reconcile(ctx context.Context, site *model.Site) error {
+
+	// get connector deployment status
+	// get connector deployment that needs recreate
 
 	return nil
 
@@ -80,7 +85,7 @@ func (s *SiteServiceImpl) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.sacClient.DeleteSite(id)
 }
 
-func (s *SiteServiceImpl) getDeployConnectorInputs(connector *dto.Connector, site *model.Site, siteCRD *accessv1.Site) (*connector_deployer.DeployConnectorInput, error) {
+func (s *SiteServiceImpl) getDeployConnectorInputs(connector *dto.Connector, site *model.Site) (*connector_deployer.DeployConnectorInput, error) {
 	ConnectorID, err := uuid.Parse(connector.ID)
 	if err != nil {
 		return nil, err
@@ -100,6 +105,6 @@ func (s *SiteServiceImpl) getDeployConnectorInputs(connector *dto.Connector, sit
 		Name:            connector.Name,
 		EnvironmentVars: envs,
 		Namespace:       site.ConnectorsNamespace,
-		Site:            siteCRD,
+		SiteNamespace:   site.SiteNamespace,
 	}, nil
 }
