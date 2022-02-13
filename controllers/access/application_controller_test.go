@@ -80,11 +80,11 @@ var _ = Describe("Application controller", func() {
 	//				},
 	//			},
 	//		}
-	//		Expect(k8sClient.Create(ctx, cronJob)).Should(Succeed())
+	//		Expect(k8sClient.createSite(ctx, cronJob)).Should(Succeed())
 	//
 	//		/*
 	//			After creating this CronJob, let's check that the CronJob's Spec fields match what we passed in.
-	//			Note that, because the k8s apiserver may not have finished creating a CronJob after our `Create()` call from earlier, we will use Gomega’s Eventually() testing function instead of Expect() to give the apiserver an opportunity to finish creating our CronJob.
+	//			Note that, because the k8s apiserver may not have finished creating a CronJob after our `createSite()` call from earlier, we will use Gomega’s Eventually() testing function instead of Expect() to give the apiserver an opportunity to finish creating our CronJob.
 	//
 	//			`Eventually()` will repeatedly run the function provided as an argument every interval seconds until
 	//			(a) the function’s output matches what’s expected in the subsequent `Should()` call, or
@@ -161,7 +161,7 @@ var _ = Describe("Application controller", func() {
 	//
 	//		controllerRef := metav1.NewControllerRef(createdCronjob, gvk)
 	//		testJob.SetOwnerReferences([]metav1.OwnerReference{*controllerRef})
-	//		Expect(k8sClient.Create(ctx, testJob)).Should(Succeed())
+	//		Expect(k8sClient.createSite(ctx, testJob)).Should(Succeed())
 	//		/*
 	//			Adding this Job to our test CronJob should trigger our controller’s reconciler logic.
 	//			After that, we can write a test that evaluates whether our controller eventually updates our CronJob’s Status field as expected!

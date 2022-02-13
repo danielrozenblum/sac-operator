@@ -20,7 +20,7 @@ type SecureAccessCloudClient interface {
 	DeleteSite(id uuid.UUID) error
 	BindApplicationToSite(applicationId uuid.UUID, siteId uuid.UUID) error
 
-	CreateConnector(*dto.SiteDTO) (*dto.Connector, error)
+	CreateConnector(siteDTO *dto.SiteDTO, connectorName string) (*dto.Connector, error)
 	ListConnectorsBySite(siteName string) ([]dto.ConnectorPageDTO, error)
 	DeleteConnector(connectorID uuid.UUID) error
 }

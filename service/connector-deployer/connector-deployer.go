@@ -6,21 +6,36 @@ import (
 	"github.com/google/uuid"
 )
 
-type DeployConnectorInput struct {
+type CreateConnectorInput struct {
 	ConnectorID     *uuid.UUID
 	SiteName        string
 	Image           string
 	Name            string
 	EnvironmentVars map[string]string
-	Namespace       string
-	SiteNamespace   string
 }
 
-type DeployConnectorOutput struct {
+type CreateConnctorOutput struct {
 	DeploymentID *uuid.UUID
 	Status       string
 }
 
+type GetConnectorsInput struct {
+}
+
+type ConnectorStatus string
+
+const (
+	OKConnectorStatus       = "OK"
+	RecreateConnectorStatus = "Recreate"
+	PendingConnectorStatus  = "Pending"
+)
+
+type Connector struct {
+	ID     *uuid.UUID
+	Status ConnectorStatus
+}
+
 type ConnnectorDeployer interface {
-	Deploy(ctx context.Context, inputs *DeployConnectorInput) (*DeployConnectorOutput, error)
+	CreateConnector(ctx context.Context, inputs *CreateConnectorInput) (*CreateConnctorOutput, error)
+	GetConnectorsForSite(ctx context.Context, siteName string) ([]Connector, error)
 }

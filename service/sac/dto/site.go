@@ -8,9 +8,9 @@ import (
 )
 
 type SiteDTO struct {
-	ID         *uuid.UUID  `json:"id"`
-	Name       string      `json:"name"`
-	Connectors []Connector `json:"connectors"`
+	ID               *uuid.UUID  `json:"id"`
+	Name             string      `json:"name"`
+	ConnectorObjects []Connector `json:"connector_objects"`
 }
 
 type SitePageDTO struct {
@@ -26,7 +26,7 @@ type SitePageDTO struct {
 
 func FromSiteModel(site *model.Site) *SiteDTO {
 	return &SiteDTO{
-		ID:   site.ID,
+		ID:   site.SACSiteID,
 		Name: site.Name,
 	}
 }

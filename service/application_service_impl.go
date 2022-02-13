@@ -51,7 +51,7 @@ func (a *ApplicationServiceImpl) Create(ctx context.Context, applicationToCreate
 		return nil, typederror.WrapError(typederror.UnrecoverableError, err)
 	}
 
-	// 4. Create Application
+	// 4. createSite Application
 	applicationDTO := dto.FromApplicationModel(applicationToCreate)
 	createdApplicationDTO, err := a.sacClient.CreateApplication(applicationDTO)
 	if err != nil {

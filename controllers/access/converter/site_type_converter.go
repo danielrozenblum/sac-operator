@@ -21,29 +21,47 @@ func (s *SiteConverter) ConvertToServiceModel(site *accessv1.Site) (*model.Site,
 
 	siteModel := &model.Site{
 		Name:                site.Name,
-		ID:                  uuid,
+		SiteNamespace:       site.Namespace,
+		SACSiteID:           uuid,
 		TenantIdentifier:    site.Spec.TenantIdentifier,
 		NumberOfConnectors:  site.Spec.NumberOfConnectors,
 		ConnectorsNamespace: site.Spec.ConnectorsNamespace,
 		EndpointURL:         site.Spec.EndpointURL,
-		SiteNamespace:       site.Namespace,
 	}
 	connectors := []model.Connector{}
 
 	for _, connector := range site.Status.Connectors {
-		connectorUUID, err2 := utils.FromUIDType(connector.ConnectorID)
-		if err2 != nil {
-			return nil, err2
+		connectorUUID, err := utils.FromUIDType(connector.ConnectorID)
+		if err != nil {
+			return nil, err
+		}
+		deploymentUUID, err := utils.FromUIDType(connector.PodID)
+		if err != nil {
+			return nil, err
 		}
 		connectors = append(connectors, model.Connector{
-			ConnectorID: connectorUUID,
-			Name:        connector.Name,
+			ConnectorID:           connectorUUID,
+			ConnectorDeploymentID: deploymentUUID,
 		})
 	}
 
 	siteModel.Connectors = connectors
 
 	return siteModel, nil
+}
+
+func (s *SiteConverter) ConvertFromServiceModel(site *model.Site) *accessv1.SiteStatus {
+
+	siteStatus := &accessv1.SiteStatus{}
+
+	siteStatus.ID = utils.FromUUID(*site.SACSiteID)
+	siteStatus.Connectors = make([]accessv1.Connector, len(site.Connectors))
+	for i := range site.Connectors {
+		siteStatus.Connectors[i].ConnectorID = utils.FromUUID(*site.Connectors[i].ConnectorID)
+		siteStatus.Connectors[i].PodID = utils.FromUUID(*site.Connectors[i].ConnectorDeploymentID)
+	}
+
+	return siteStatus
 }
 
 func (s *SiteConverter) UpdateStatus(siteModel *model.Site, site *accessv1.SiteStatus) error {
@@ -56,11 +74,10 @@ func (s *SiteConverter) UpdateStatus(siteModel *model.Site, site *accessv1.SiteS
 		connectors = append(connectors, accessv1.Connector{
 			ConnectorID: connectorID,
 			PodID:       podID,
-			Name:        siteModel.Connectors[i].Name,
 		})
 	}
 
-	site.ID = utils.FromUUID(*siteModel.ID)
+	site.ID = utils.FromUUID(*siteModel.SACSiteID)
 	site.Connectors = connectors
 
 	return nil

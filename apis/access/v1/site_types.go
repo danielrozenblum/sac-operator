@@ -34,14 +34,11 @@ type SiteSpec struct {
 	NumberOfConnectors  int    `json:"number_of_connectors"`
 	ConnectorsNamespace string `json:"connectors_namespace"`
 	EndpointURL         string `json:"endpoint_url"`
-	SacSecretName       string `json:"sac_secret_name"`
 }
 
 type Connector struct {
-	ConnectorID     *types.UID `json:"connector_id"`
-	PodID           *types.UID `json:"pod_id"`
-	Name            string     `json:"name"`
-	ConnectorStatus string     `json:"connector_status"`
+	ConnectorID *types.UID `json:"connector_id"`
+	PodID       *types.UID `json:"pod_id"`
 }
 
 // SiteStatus defines the observed state of Site

@@ -19,7 +19,7 @@ type Connector struct {
 
 type Site struct {
 	Name                string
-	ID                  *uuid.UUID
+	SACSiteID           *uuid.UUID
 	TenantIdentifier    string
 	NumberOfConnectors  int
 	EndpointURL         string

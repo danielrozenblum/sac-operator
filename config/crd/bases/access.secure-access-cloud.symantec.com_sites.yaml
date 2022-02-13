@@ -64,10 +64,6 @@ spec:
                         to string.  Being a type captures intent and helps make sure
                         that UIDs and names do not get conflated.
                       type: string
-                    connector_status:
-                      type: string
-                    name:
-                      type: string
                     pod_id:
                       description: UID is a type that holds unique ID values, including
                         UUIDs.  Because we don't ONLY use UUIDs, this is an alias
@@ -76,8 +72,6 @@ spec:
                       type: string
                   required:
                   - connector_id
-                  - connector_status
-                  - name
                   - pod_id
                   type: object
                 type: array

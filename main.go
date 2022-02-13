@@ -20,8 +20,6 @@ import (
 	"flag"
 	"os"
 
-	connectordeployer "bitbucket.org/accezz-io/sac-operator/service/connector-deployer"
-
 	"bitbucket.org/accezz-io/sac-operator/service/sac"
 
 	"bitbucket.org/accezz-io/sac-operator/controllers/access/converter"
@@ -100,21 +98,19 @@ func main() {
 		}
 	}
 
-	sacService := sac.NewSecureAccessCloudClientImpl(
-		&sac.SecureAccessCloudSettings{
-			ClientID:     "c7e8b05aada8db0980986a2d92e41d63",
-			ClientSecret: "2de3de254b03861065ce286da87a2584b279a27b7c85615332e29ed8d5d1bf7a",
-			TenantDomain: "symchatbotdemo.luminatesite.com",
-		},
-	)
+	secureAccessCloudSettings := &sac.SecureAccessCloudSettings{
+		ClientID:     "c7e8b05aada8db0980986a2d92e41d63",
+		ClientSecret: "2de3de254b03861065ce286da87a2584b279a27b7c85615332e29ed8d5d1bf7a",
+		TenantDomain: "symchatbotdemo.luminatesite.com",
+	}
 
-	connectorDeployer := connectordeployer.NewKubernetesImpl(mgr.GetClient(), mgr.GetScheme())
-
+	siteReconcilerLogger := ctrl.Log.WithName("site-reconcile")
 	if err = (&accesscontrollers.SiteReconcile{
-		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
-		SiteService:   service.NewSiteServiceImpl(sacService, connectorDeployer),
-		SiteConverter: converter.NewSiteConverter(),
+		Client:                    mgr.GetClient(),
+		Scheme:                    mgr.GetScheme(),
+		SecureAccessCloudSettings: secureAccessCloudSettings,
+		SiteConverter:             converter.NewSiteConverter(),
+		Log:                       siteReconcilerLogger,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Site")
 		os.Exit(1)

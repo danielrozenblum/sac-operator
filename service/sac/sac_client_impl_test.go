@@ -119,7 +119,7 @@ func TestCreateSite(t *testing.T) {
 
 	// when
 	connector := &dto.Connector{}
-	connector, err = sacClientTest.client.CreateConnector(site)
+	connector, err = sacClientTest.client.CreateConnector(site, "test")
 	// then
 	assert.NoError(t, err)
 	assert.NotEmpty(t, connector)

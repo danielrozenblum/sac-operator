@@ -8,8 +8,6 @@ import (
 	"net/url"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/rand"
-
 	"bitbucket.org/accezz-io/sac-operator/service/sac/dto"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2/clientcredentials"
@@ -141,11 +139,11 @@ func (s *SecureAccessCloudClientImpl) BindApplicationToSite(applicationId uuid.U
 	return nil
 }
 
-func (s *SecureAccessCloudClientImpl) CreateConnector(siteDTO *dto.SiteDTO) (*dto.Connector, error) {
+func (s *SecureAccessCloudClientImpl) CreateConnector(siteDTO *dto.SiteDTO, connectorName string) (*dto.Connector, error) {
 	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/connectors?bind_to_site_id=" + siteDTO.ID.String()
 
 	connector := &dto.Connector{
-		Name:           fmt.Sprintf("%s-%s", siteDTO.Name, rand.String(3)),
+		Name:           connectorName,
 		DeploymentType: "linux",
 	}
 
@@ -162,7 +160,7 @@ func (s *SecureAccessCloudClientImpl) ListConnectorsBySite(siteName string) ([]d
 	panic("implement me")
 }
 
-func (s *SecureAccessCloudClientImpl) DeleteConnector(connectorID uuid.UUID) error {
+func (s *SecureAccessCloudClientImpl) DeleteConnector(id uuid.UUID) error {
 	//TODO implement me
 	panic("implement me")
 }

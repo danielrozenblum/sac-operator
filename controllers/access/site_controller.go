@@ -18,7 +18,12 @@ package access
 
 import (
 	"context"
-	"time"
+
+	"github.com/go-logr/logr"
+
+	connector_deployer "bitbucket.org/accezz-io/sac-operator/service/connector-deployer"
+
+	"bitbucket.org/accezz-io/sac-operator/service/sac"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -39,9 +44,11 @@ import (
 // SiteReconcile reconciles a Site object
 type SiteReconcile struct {
 	client.Client
-	Scheme        *runtime.Scheme
-	SiteService   service.SiteService
-	SiteConverter *converter.SiteConverter
+	Scheme *runtime.Scheme
+	//SiteService               service.SiteService
+	SiteConverter             *converter.SiteConverter
+	SecureAccessCloudSettings *sac.SecureAccessCloudSettings
+	Log                       logr.Logger
 }
 
 //+kubebuilder:rbac:groups=access.secure-access-cloud.symantec.com,resources=sites,verbs=get;list;watch;create;update;patch;delete
@@ -61,58 +68,40 @@ func (r *SiteReconcile) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	log := logger.FromContext(ctx).WithValues("sac-site spec", req.NamespacedName)
 
 	siteCRD := &accessv1.Site{}
-	connectorList := &corev1.PodList{}
 
 	if err := r.Get(ctx, req.NamespacedName, siteCRD); err != nil {
 		log.Error(err, "unable to fetch site")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if err := r.List(ctx, connectorList, client.InNamespace(siteCRD.Spec.ConnectorsNamespace), client.MatchingFields{podOwnerKey: req.Name}); err != nil {
-		log.Error(err, "unable to list pods Jobs")
-		return ctrl.Result{}, err
-	}
-
-	log.WithValues("siteCRD", siteCRD, "connectorList", connectorList).Info("got triggered")
-
-	switch {
-	case siteCRD.Status.ID == nil:
-		return r.CreateSite(ctx, siteCRD)
-	default:
-		return r.ReconcileConnectors(ctx, siteCRD, connectorList)
-	}
-
-}
-
-func (r *SiteReconcile) CreateSite(ctx context.Context, siteCRD *accessv1.Site) (ctrl.Result, error) {
-	log := logger.FromContext(ctx).WithValues("creating site", siteCRD.Name)
-
 	siteModel, err := r.SiteConverter.ConvertToServiceModel(siteCRD)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	err = r.SiteService.Create(ctx, siteModel)
+
+	serviceImpl, err := r.ServiceFacotry(ctx, siteCRD)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	err = r.SiteConverter.UpdateStatus(siteModel, &siteCRD.Status)
+
+	err = serviceImpl.Reconcile(ctx, siteModel)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	siteStatus := r.SiteConverter.ConvertFromServiceModel(siteModel)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	siteCRD.Status = *siteStatus
 	if err = r.Status().Update(ctx, siteCRD); err != nil {
 		log.Error(err, "unable to update siteCRD status")
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{
-		Requeue:      true,
-		RequeueAfter: 30 * time.Second,
-	}, nil
-}
 
-func (r *SiteReconcile) ReconcileConnectors(ctx context.Context, siteCRD *accessv1.Site, connectorList *corev1.PodList) (ctrl.Result, error) {
-	_ = logger.FromContext(ctx).WithValues("ReconcileConnectors for site", siteCRD.Name)
+	return ctrl.Result{}, err
 
-	return ctrl.Result{}, nil
 }
 
 var (
@@ -144,4 +133,14 @@ func (r *SiteReconcile) SetupWithManager(mgr ctrl.Manager) error {
 		For(&accessv1.Site{}).
 		Owns(&corev1.Pod{}).
 		Complete(r)
+}
+
+func (r *SiteReconcile) ServiceFacotry(ctx context.Context, site *accessv1.Site) (*service.SiteServiceImpl, error) {
+
+	sacClient := sac.NewSecureAccessCloudClientImpl(r.SecureAccessCloudSettings)
+	k8sClients := connector_deployer.NewKubernetesImpl(r.Client, r.Scheme)
+	k8sClients.ConnectorsNamespace = site.Spec.ConnectorsNamespace
+	k8sClients.SiteNamespace = site.Namespace
+	return service.NewSiteServiceImpl(sacClient, k8sClients, r.Log), nil
+
 }
