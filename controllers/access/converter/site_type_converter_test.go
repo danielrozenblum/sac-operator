@@ -24,14 +24,7 @@ func TestSiteConverter_ConvertFromServiceModel(t *testing.T) {
 			name: "happy-flow",
 			args: args{
 				site: &model.Site{
-					SACSiteID: getRandomUUIDPointer(),
-					Connectors: []model.Connector{
-						{
-							ConnectorID:           getRandomUUIDPointer(),
-							ConnectorDeploymentID: getRandomUUIDPointer(),
-							Name:                  "test",
-						},
-					},
+					SACSiteID: "51f33785-434d-41cf-8eae-7c07f43afbe1",
 				},
 			},
 			want: nil,
@@ -41,11 +34,7 @@ func TestSiteConverter_ConvertFromServiceModel(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &SiteConverter{}
 			site := s.ConvertFromServiceModel(tt.args.site)
-			assert.Equal(t, string(*site.ID), tt.args.site.SACSiteID.String())
-			for i := range tt.args.site.Connectors {
-				assert.Equal(t, tt.args.site.Connectors[i].ConnectorID.String(), string(*site.Connectors[i].ConnectorID))
-				assert.Equal(t, tt.args.site.Connectors[i].ConnectorDeploymentID.String(), string(*site.Connectors[i].PodID))
-			}
+			assert.Equal(t, tt.args.site.SACSiteID, site.ID)
 		})
 	}
 }

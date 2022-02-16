@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"errors"
 
@@ -10,6 +11,10 @@ import (
 
 var SiteAlreadyExist = errors.New("site already exist")
 
+type ReconcileOutput struct {
+	RequeueAfter time.Duration
+}
+
 type SiteService interface {
-	Reconcile(ctx context.Context, site *model.Site) error
+	Reconcile(ctx context.Context, site *model.Site) (*ReconcileOutput, error)
 }

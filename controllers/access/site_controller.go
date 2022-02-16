@@ -19,6 +19,8 @@ package access
 import (
 	"context"
 
+	"bitbucket.org/accezz-io/sac-operator/service/repository"
+
 	"github.com/go-logr/logr"
 
 	connector_deployer "bitbucket.org/accezz-io/sac-operator/service/connector-deployer"
@@ -44,8 +46,7 @@ import (
 // SiteReconcile reconciles a Site object
 type SiteReconcile struct {
 	client.Client
-	Scheme *runtime.Scheme
-	//SiteService               service.SiteService
+	Scheme                    *runtime.Scheme
 	SiteConverter             *converter.SiteConverter
 	SecureAccessCloudSettings *sac.SecureAccessCloudSettings
 	Log                       logr.Logger
@@ -74,33 +75,18 @@ func (r *SiteReconcile) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	siteModel, err := r.SiteConverter.ConvertToServiceModel(siteCRD)
+	siteModel := r.SiteConverter.ConvertToServiceModel(siteCRD)
+
+	serviceImpl := r.ServiceFacotry(ctx, siteCRD)
+
+	output, err := serviceImpl.Reconcile(ctx, siteModel)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{
+			RequeueAfter: output.RequeueAfter,
+		}, err
 	}
 
-	serviceImpl, err := r.ServiceFacotry(ctx, siteCRD)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	err = serviceImpl.Reconcile(ctx, siteModel)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	siteStatus := r.SiteConverter.ConvertFromServiceModel(siteModel)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	siteCRD.Status = *siteStatus
-	if err = r.Status().Update(ctx, siteCRD); err != nil {
-		log.Error(err, "unable to update siteCRD status")
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, err
+	return ctrl.Result{}, nil
 
 }
 
@@ -135,12 +121,13 @@ func (r *SiteReconcile) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *SiteReconcile) ServiceFacotry(ctx context.Context, site *accessv1.Site) (*service.SiteServiceImpl, error) {
+func (r *SiteReconcile) ServiceFacotry(ctx context.Context, site *accessv1.Site) *service.SiteServiceImpl {
 
 	sacClient := sac.NewSecureAccessCloudClientImpl(r.SecureAccessCloudSettings)
-	k8sClients := connector_deployer.NewKubernetesImpl(r.Client, r.Scheme)
+	k8sClients := connector_deployer.NewKubernetesImpl(r.Client, r.Scheme, podOwnerKey)
 	k8sClients.ConnectorsNamespace = site.Spec.ConnectorsNamespace
 	k8sClients.SiteNamespace = site.Namespace
-	return service.NewSiteServiceImpl(sacClient, k8sClients, r.Log), nil
+	repo := repository.NewK8sImpl(r.Client, site.Namespace)
+	return service.NewSiteServiceImpl(sacClient, k8sClients, r.Log, repo)
 
 }

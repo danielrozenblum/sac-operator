@@ -2,6 +2,7 @@ package connector_deployer
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -14,11 +15,6 @@ type CreateConnectorInput struct {
 	EnvironmentVars map[string]string
 }
 
-type CreateConnctorOutput struct {
-	DeploymentID *uuid.UUID
-	Status       string
-}
-
 type GetConnectorsInput struct {
 }
 
@@ -26,16 +22,18 @@ type ConnectorStatus string
 
 const (
 	OKConnectorStatus       = "OK"
-	RecreateConnectorStatus = "Recreate"
-	PendingConnectorStatus  = "Pending"
+	ToDeleteConnectorStatus = "ToDelete"
 )
 
 type Connector struct {
-	ID     *uuid.UUID
-	Status ConnectorStatus
+	DeploymentName   string
+	SACID            string
+	Status           ConnectorStatus
+	CreatedTimeStamp time.Time
 }
 
 type ConnnectorDeployer interface {
-	CreateConnector(ctx context.Context, inputs *CreateConnectorInput) (*CreateConnctorOutput, error)
+	CreateConnector(ctx context.Context, inputs *CreateConnectorInput) error
+	DeleteConnector(ctx context.Context, Name string) error
 	GetConnectorsForSite(ctx context.Context, siteName string) ([]Connector, error)
 }

@@ -4,13 +4,13 @@ import (
 	"time"
 
 	"bitbucket.org/accezz-io/sac-operator/model"
-	"github.com/google/uuid"
 )
 
 type SiteDTO struct {
-	ID               *uuid.UUID  `json:"id"`
-	Name             string      `json:"name"`
-	ConnectorObjects []Connector `json:"connector_objects"`
+	ID               string             `json:"id,omitempty"`
+	Name             string             `json:"name,omitempty"`
+	ConnectorObjects []ConnectorObjects `json:"connector_objects,omitempty"`
+	Connectors       []string           `json:"connectors,omitempty"`
 }
 
 type SitePageDTO struct {
@@ -31,7 +31,7 @@ func FromSiteModel(site *model.Site) *SiteDTO {
 	}
 }
 
-type Connector struct {
+type ConnectorObjects struct {
 	ID                             string     `json:"id,omitempty"`
 	Name                           string     `json:"name,omitempty"`
 	Otp                            string     `json:"otp,omitempty"`
@@ -49,16 +49,16 @@ type Connector struct {
 	GeoLocation                    string     `json:"geo_location,omitempty"`
 	DeploymentType                 string     `json:"deployment_type,omitempty"`
 	KubernetesPersistentVolumeName string     `json:"kubernetes_persistent_volume_name,omitempty"`
-	Version                        string     `json:"version"`
+	Version                        string     `json:"version,omitempty"`
 }
 
 type ConnectorPageDTO struct {
-	First            bool        `json:"first"`
-	Last             bool        `json:"last"`
-	NumberOfElements int         `json:"numberOfElements"`
-	Content          []Connector `json:"content"`
-	PageNumber       int         `json:"number"`
-	PageSize         int         `json:"size"`
-	TotalElements    int         `json:"totalElements"`
-	TotalPages       int         `json:"totalPages"`
+	First            bool               `json:"first"`
+	Last             bool               `json:"last"`
+	NumberOfElements int                `json:"numberOfElements"`
+	Content          []ConnectorObjects `json:"content"`
+	PageNumber       int                `json:"number"`
+	PageSize         int                `json:"size"`
+	TotalElements    int                `json:"totalElements"`
+	TotalPages       int                `json:"totalPages"`
 }

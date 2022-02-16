@@ -125,7 +125,7 @@ func (a *ApplicationServiceImpl) bindSiteAndPolicies(
 	policies []dto.PolicyDTO,
 ) error {
 	// Bind to Site (Idempotent)
-	err := a.sacClient.BindApplicationToSite(*application.ID, *site.ID)
+	err := a.sacClient.BindApplicationToSite(*application.ID, site.ID)
 	if err != nil {
 		return typederror.WrapError(typederror.PartiallySuccessError, err)
 	}

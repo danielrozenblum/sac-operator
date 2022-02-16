@@ -17,10 +17,10 @@ type SecureAccessCloudClient interface {
 
 	FindSiteByName(name string) (*dto.SiteDTO, error)
 	CreateSite(siteDTO *dto.SiteDTO) (*dto.SiteDTO, error)
-	DeleteSite(id uuid.UUID) error
-	BindApplicationToSite(applicationId uuid.UUID, siteId uuid.UUID) error
+	DeleteSite(id string) error
+	BindApplicationToSite(applicationId uuid.UUID, siteId string) error
 
-	CreateConnector(siteDTO *dto.SiteDTO, connectorName string) (*dto.Connector, error)
-	ListConnectorsBySite(siteName string) ([]dto.ConnectorPageDTO, error)
-	DeleteConnector(connectorID uuid.UUID) error
+	CreateConnector(siteDTO *dto.SiteDTO, connectorName string) (*dto.ConnectorObjects, error)
+	ListConnectorsBySite(siteName string) ([]string, error)
+	DeleteConnector(connectorID string) error
 }

@@ -1,0 +1,9 @@
+apiVersion: access.secure-access-cloud.symantec.com/v1
+kind: Site
+metadata:
+  name: odedpriva-1
+spec:
+  tenant_identifier: 1667d9c1d754419a9c456f47b9c1df28_symchatbotdemo
+  number_of_connectors: 4
+  connectors_namespace: default
+  endpoint_url: symchatbotdemo.luminatesite.com

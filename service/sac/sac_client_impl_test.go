@@ -7,8 +7,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 
 	"bitbucket.org/accezz-io/sac-operator/service/sac/dto"
-	"github.com/google/uuid"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -99,7 +97,7 @@ func TestCreateSite(t *testing.T) {
 	randomSiteName := fmt.Sprintf("create-site-%s", rand.String(4))
 	site := &dto.SiteDTO{}
 	defer func() {
-		err := sacClientTest.client.DeleteSite(*site.ID)
+		err := sacClientTest.client.DeleteSite(site.ID)
 		if err != nil {
 			t.Errorf("failed deleteing site %+v", site)
 		}
@@ -108,7 +106,7 @@ func TestCreateSite(t *testing.T) {
 
 	// when
 	site, err := sacClientTest.client.CreateSite(&dto.SiteDTO{
-		ID:   &uuid.UUID{},
+		ID:   "",
 		Name: randomSiteName,
 	})
 
@@ -118,7 +116,7 @@ func TestCreateSite(t *testing.T) {
 	assert.Equal(t, randomSiteName, site.Name)
 
 	// when
-	connector := &dto.Connector{}
+	connector := &dto.ConnectorObjects{}
 	connector, err = sacClientTest.client.CreateConnector(site, "test")
 	// then
 	assert.NoError(t, err)

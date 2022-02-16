@@ -18,7 +18,6 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -36,17 +35,11 @@ type SiteSpec struct {
 	EndpointURL         string `json:"endpoint_url"`
 }
 
-type Connector struct {
-	ConnectorID *types.UID `json:"connector_id"`
-	PodID       *types.UID `json:"pod_id"`
-}
-
 // SiteStatus defines the observed state of Site
 type SiteStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	ID         *types.UID  `json:"id"`
-	Connectors []Connector `json:"connectors"`
+	ID string `json:"id"`
 }
 
 //+kubebuilder:object:root=true

@@ -16,6 +16,11 @@ import (
 
 var ErrorPermissionDenied = fmt.Errorf("permission denied")
 var ErrorNotFound = fmt.Errorf("not found")
+var ErrConflict = fmt.Errorf("already exist")
+
+func IsConflict(err error) bool {
+	return err == ErrConflict
+}
 
 type SecureAccessCloudClientImpl struct {
 	Setting *SecureAccessCloudSettings
@@ -110,8 +115,8 @@ func (s *SecureAccessCloudClientImpl) CreateSite(siteDTO *dto.SiteDTO) (*dto.Sit
 
 	return site, nil
 }
-func (s *SecureAccessCloudClientImpl) DeleteSite(id uuid.UUID) error {
-	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/sites/" + id.String()
+func (s *SecureAccessCloudClientImpl) DeleteSite(id string) error {
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/sites/" + id
 
 	return s.performDeleteRequest(endpoint)
 
@@ -134,39 +139,43 @@ func (s *SecureAccessCloudClientImpl) FindSiteByName(name string) (*dto.SiteDTO,
 	// Return the first policy if more than one found
 	return &pageDTO.Content[0], nil
 }
-func (s *SecureAccessCloudClientImpl) BindApplicationToSite(applicationId uuid.UUID, siteId uuid.UUID) error {
+func (s *SecureAccessCloudClientImpl) BindApplicationToSite(applicationId uuid.UUID, siteId string) error {
 	// TODO: implement
 	return nil
 }
 
-func (s *SecureAccessCloudClientImpl) CreateConnector(siteDTO *dto.SiteDTO, connectorName string) (*dto.Connector, error) {
-	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/connectors?bind_to_site_id=" + siteDTO.ID.String()
+func (s *SecureAccessCloudClientImpl) CreateConnector(siteDTO *dto.SiteDTO, connectorName string) (*dto.ConnectorObjects, error) {
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/connectors?bind_to_site_id=" + siteDTO.ID
 
-	connector := &dto.Connector{
+	connector := &dto.ConnectorObjects{
 		Name:           connectorName,
 		DeploymentType: "linux",
 	}
 
 	err := s.performPostRequest(endpoint, connector, connector)
 	if err != nil {
-		return &dto.Connector{}, err
+		return &dto.ConnectorObjects{}, err
 	}
 
 	return connector, nil
 }
 
-func (s *SecureAccessCloudClientImpl) ListConnectorsBySite(siteName string) ([]dto.ConnectorPageDTO, error) {
-	//TODO implement me
-	panic("implement me")
+func (s *SecureAccessCloudClientImpl) ListConnectorsBySite(siteName string) ([]string, error) {
+	site, err := s.FindSiteByName(siteName)
+	if err != nil {
+		return nil, err
+	}
+	return site.Connectors, nil
 }
 
-func (s *SecureAccessCloudClientImpl) DeleteConnector(id uuid.UUID) error {
-	//TODO implement me
-	panic("implement me")
+func (s *SecureAccessCloudClientImpl) DeleteConnector(id string) error {
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/connectors/" + id
+
+	return s.performDeleteRequest(endpoint)
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Connector API
+// ConnectorObjects API
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -230,6 +239,10 @@ func (s *SecureAccessCloudClientImpl) performPostRequest(endpoint string, body, 
 	response, err := client.NewRequest().SetBody(body).Post(endpoint)
 	if err != nil {
 		return err
+	}
+
+	if response.StatusCode() == http.StatusConflict {
+		return ErrConflict
 	}
 
 	if response.StatusCode() != http.StatusCreated {

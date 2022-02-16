@@ -55,33 +55,12 @@ spec:
           status:
             description: SiteStatus defines the observed state of Site
             properties:
-              connectors:
-                items:
-                  properties:
-                    connector_id:
-                      description: UID is a type that holds unique ID values, including
-                        UUIDs.  Because we don't ONLY use UUIDs, this is an alias
-                        to string.  Being a type captures intent and helps make sure
-                        that UIDs and names do not get conflated.
-                      type: string
-                    pod_id:
-                      description: UID is a type that holds unique ID values, including
-                        UUIDs.  Because we don't ONLY use UUIDs, this is an alias
-                        to string.  Being a type captures intent and helps make sure
-                        that UIDs and names do not get conflated.
-                      type: string
-                  required:
-                  - connector_id
-                  - pod_id
-                  type: object
-                type: array
               id:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                   of cluster Important: Run "make" to regenerate code after modifying
                   this file'
                 type: string
             required:
-            - connectors
             - id
             type: object
         type: object

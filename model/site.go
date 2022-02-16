@@ -1,29 +1,13 @@
 package model
 
-import (
-	"github.com/google/uuid"
-)
-
-type ConnectorDeploymentStatus string
-
-const (
-	RunningConnectorStatus ConnectorDeploymentStatus = "Running"
-)
-
-type Connector struct {
-	ConnectorID           *uuid.UUID
-	ConnectorDeploymentID *uuid.UUID
-	Version               string
-	Name                  string
-}
-
 type Site struct {
 	Name                string
-	SACSiteID           *uuid.UUID
+	SACSiteID           string
 	TenantIdentifier    string
 	NumberOfConnectors  int
 	EndpointURL         string
-	Connectors          []Connector
 	ConnectorsNamespace string
 	SiteNamespace       string
+	ToDelete            bool
+	Deleted             bool
 }

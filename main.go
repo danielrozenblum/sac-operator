@@ -99,9 +99,9 @@ func main() {
 	}
 
 	secureAccessCloudSettings := &sac.SecureAccessCloudSettings{
-		ClientID:     "c7e8b05aada8db0980986a2d92e41d63",
-		ClientSecret: "2de3de254b03861065ce286da87a2584b279a27b7c85615332e29ed8d5d1bf7a",
-		TenantDomain: "symchatbotdemo.luminatesite.com",
+		ClientID:     os.Getenv("SAC_CLIENT_ID"),
+		ClientSecret: os.Getenv("SAC_CLIENT_SECRET"),
+		TenantDomain: os.Getenv("SAC_TENANT_DOMAIN"),
 	}
 
 	siteReconcilerLogger := ctrl.Log.WithName("site-reconcile")
