@@ -3,12 +3,15 @@ package sac
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"time"
 
+	"bitbucket.org/accezz-io/sac-operator/model"
 	"bitbucket.org/accezz-io/sac-operator/service/sac/dto"
+	"bitbucket.org/accezz-io/sac-operator/utils"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2/clientcredentials"
 	"gopkg.in/resty.v1"
@@ -36,13 +39,47 @@ func NewSecureAccessCloudClientImpl(setting *SecureAccessCloudSettings) SecureAc
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (s *SecureAccessCloudClientImpl) CreateApplication(applicationDTO *dto.ApplicationDTO) (*dto.ApplicationDTO, error) {
-	// TODO: implement
-	return nil, nil
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/applications/"
+
+	var createdApplicationDTO dto.ApplicationDTO
+
+	err := s.performModifyRequest(http.MethodPost, endpoint, applicationDTO, createdApplicationDTO)
+	if err != nil {
+		return nil, err
+	}
+
+	return &createdApplicationDTO, nil
 }
 
 func (s *SecureAccessCloudClientImpl) UpdateApplication(applicationDTO *dto.ApplicationDTO) (*dto.ApplicationDTO, error) {
-	// TODO: implement
-	return nil, nil
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/applications/" + applicationDTO.ID.String()
+
+	var createdApplicationDTO dto.ApplicationDTO
+
+	err := s.performModifyRequest(http.MethodPut, endpoint, applicationDTO, createdApplicationDTO)
+	if err != nil {
+		return nil, err
+	}
+
+	return &createdApplicationDTO, nil
+}
+
+func (s *SecureAccessCloudClientImpl) FindApplicationByID(id uuid.UUID) (*dto.ApplicationDTO, error) {
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/applications/" + id.String()
+
+	var applications dto.ApplicationPageDTO
+	err := s.performGetRequest(endpoint, &applications)
+
+	if err != nil {
+		return &dto.ApplicationDTO{}, err
+	}
+
+	if applications.NumberOfElements == 0 {
+		return &dto.ApplicationDTO{}, ErrorNotFound
+	}
+
+	// Return the first policy if more than one found
+	return &applications.Content[0], nil
 }
 
 func (s *SecureAccessCloudClientImpl) FindApplicationByName(name string) (*dto.ApplicationDTO, error) {
@@ -64,7 +101,21 @@ func (s *SecureAccessCloudClientImpl) FindApplicationByName(name string) (*dto.A
 }
 
 func (s *SecureAccessCloudClientImpl) DeleteApplication(id uuid.UUID) error {
-	// TODO: implement
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/applications/" + id.String()
+
+	// 1. Get Authorization Token
+	client := s.getClient()
+
+	// 2. Perform the GET request
+	response, err := client.NewRequest().Delete(endpoint)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode() != http.StatusOK && response.StatusCode() != http.StatusNoContent {
+		return fmt.Errorf("failed with status-code: %d and body: %s", response.StatusCode(), response.String())
+	}
+
 	return nil
 }
 
@@ -90,13 +141,34 @@ func (s *SecureAccessCloudClientImpl) FindPolicyByName(name string) (dto.PolicyD
 	return policies.Content[0], nil
 }
 
-func (s *SecureAccessCloudClientImpl) FindPoliciesByNames(name []string) ([]dto.PolicyDTO, error) {
-	// TODO: implement
-	return nil, nil
+func (s *SecureAccessCloudClientImpl) FindPoliciesByNames(names []string) ([]dto.PolicyDTO, error) {
+	var results []dto.PolicyDTO
+
+	for _, name := range names {
+		policyDTO, err := s.FindPolicyByName(name)
+		if err != nil {
+			return results, err
+		}
+
+		results = append(results, policyDTO)
+	}
+
+	return results, nil
 }
 
-func (s *SecureAccessCloudClientImpl) UpdatePolicies(applicationId uuid.UUID, policies []uuid.UUID) error {
-	// TODO: implement
+func (s *SecureAccessCloudClientImpl) UpdatePolicies(applicationId uuid.UUID, applicationType model.ApplicationType, policies []uuid.UUID) error {
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/policies/by-app-id/" + applicationId.String()
+
+	applicationToPoliciesBindingRequest := applicationToPoliciesBinding{
+		ApplicationType: applicationType,
+		PolicyIDs:       utils.ToStringArray(policies),
+	}
+
+	err := s.performModifyRequest(http.MethodPut, endpoint, applicationToPoliciesBindingRequest, nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -115,12 +187,14 @@ func (s *SecureAccessCloudClientImpl) CreateSite(siteDTO *dto.SiteDTO) (*dto.Sit
 
 	return site, nil
 }
+
 func (s *SecureAccessCloudClientImpl) DeleteSite(id string) error {
 	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/sites/" + id
 
 	return s.performDeleteRequest(endpoint)
 
 }
+
 func (s *SecureAccessCloudClientImpl) FindSiteByName(name string) (*dto.SiteDTO, error) {
 	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/sites" + "?filter=" + url.QueryEscape(name)
 
@@ -139,10 +213,15 @@ func (s *SecureAccessCloudClientImpl) FindSiteByName(name string) (*dto.SiteDTO,
 	// Return the first policy if more than one found
 	return &pageDTO.Content[0], nil
 }
+
 func (s *SecureAccessCloudClientImpl) BindApplicationToSite(applicationId uuid.UUID, siteId string) error {
-	// TODO: implement
-	return nil
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/applications/" + applicationId.String() + "/site-binding/" + siteId
+	return s.performModifyRequest(http.MethodPut, endpoint, nil, nil)
 }
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Connector API
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (s *SecureAccessCloudClientImpl) CreateConnector(siteDTO *dto.SiteDTO, connectorName string) (*dto.ConnectorObjects, error) {
 	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/connectors?bind_to_site_id=" + siteDTO.ID
@@ -173,10 +252,6 @@ func (s *SecureAccessCloudClientImpl) DeleteConnector(id string) error {
 
 	return s.performDeleteRequest(endpoint)
 }
-
-// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// ConnectorObjects API
-// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Private Functions
@@ -229,6 +304,58 @@ func (s *SecureAccessCloudClientImpl) performGetRequest(endpoint string, obj int
 	}
 
 	return nil
+}
+
+func (s *SecureAccessCloudClientImpl) performModifyRequest(method string, endpoint string, requestObj interface{}, responseObj interface{}) error {
+	// 1. Get Authorization Token
+	client := s.getClient()
+
+	// 2. Perform the request
+	request := client.NewRequest()
+	var response *resty.Response
+	var err error
+
+	// 2.1. Marshal the request
+	if requestObj != nil {
+		body, err := json.Marshal(requestObj)
+		if err != nil {
+			return err
+		}
+
+		request = request.SetBody(body).SetHeader("Content-Type", "application/json")
+	}
+
+	switch method {
+	case http.MethodPost:
+		response, err = request.Post(endpoint)
+	case http.MethodPut:
+		response, err = request.Put(endpoint)
+	default:
+		return errors.New("unsupported http method: " + method)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode() != http.StatusCreated && response.StatusCode() != http.StatusOK {
+		return fmt.Errorf("failed with status-code: %d and body: %s", response.StatusCode(), response.String())
+	}
+
+	// 4. Unmarshal response body
+	if responseObj != nil {
+		err = json.Unmarshal(response.Body(), &responseObj)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type applicationToPoliciesBinding struct {
+	ApplicationType model.ApplicationType
+	PolicyIDs       []string
 }
 
 func (s *SecureAccessCloudClientImpl) performPostRequest(endpoint string, body, obj interface{}) error {

@@ -31,3 +31,12 @@ func FromInt64(i int64) *int64 {
 	return &i
 
 }
+
+func ToStringArray(policyIDs []uuid.UUID) []string {
+	var policyIDsAsString []string
+	for _, policyID := range policyIDs {
+		policyIDsAsString = append(policyIDsAsString, policyID.String())
+	}
+
+	return policyIDsAsString
+}
