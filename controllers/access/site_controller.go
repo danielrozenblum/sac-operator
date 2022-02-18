@@ -80,12 +80,14 @@ func (r *SiteReconcile) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	serviceImpl := r.ServiceFacotry(ctx, siteCRD)
 
 	output, err := serviceImpl.Reconcile(ctx, siteModel)
+	siteCRD.Status = r.SiteConverter.ConvertFromServiceOutput(output)
 	if err != nil {
-		return ctrl.Result{
-			RequeueAfter: output.RequeueAfter,
-		}, err
+		log.Error(err, "got error from reconcile, trying to update last know status")
+		err = r.Status().Update(ctx, siteCRD)
+		if err != nil {
+			log.Error(err, "go error from reconcile, trying to update last know status")
+		}
 	}
-
 	return ctrl.Result{}, nil
 
 }

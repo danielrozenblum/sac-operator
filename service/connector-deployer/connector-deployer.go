@@ -32,7 +32,8 @@ type Connector struct {
 	CreatedTimeStamp time.Time
 }
 
-type ConnnectorDeployer interface {
+//go:generate mockery --name=ConnectorDeployer --inpackage --case=underscore --output=mockConnectorDeployerInterface
+type ConnectorDeployer interface {
 	CreateConnector(ctx context.Context, inputs *CreateConnectorInput) error
 	DeleteConnector(ctx context.Context, Name string) error
 	GetConnectorsForSite(ctx context.Context, siteName string) ([]Connector, error)

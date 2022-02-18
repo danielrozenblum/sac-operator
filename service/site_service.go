@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
-
 	"errors"
 
 	"bitbucket.org/accezz-io/sac-operator/model"
@@ -11,10 +9,13 @@ import (
 
 var SiteAlreadyExist = errors.New("site already exist")
 
-type ReconcileOutput struct {
-	RequeueAfter time.Duration
+type SiteReconcileOutput struct {
+	Deleted             bool
+	SACSiteID           string
+	HealthConnectors    map[string]string
+	UnHealthyConnectors map[string]string
 }
 
 type SiteService interface {
-	Reconcile(ctx context.Context, site *model.Site) (*ReconcileOutput, error)
+	Reconcile(ctx context.Context, site *model.Site) (*SiteReconcileOutput, error)
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
+//go:generate mockery --name=SecureAccessCloudClient --inpackage --case=underscore --output=mockSecureAccessCloudClientInterface
 type SecureAccessCloudClient interface {
 	CreateApplication(applicationDTO *dto.ApplicationDTO) (*dto.ApplicationDTO, error)
 	UpdateApplication(applicationDTO *dto.ApplicationDTO) (*dto.ApplicationDTO, error)

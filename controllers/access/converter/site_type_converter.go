@@ -3,6 +3,7 @@ package converter
 import (
 	accessv1 "bitbucket.org/accezz-io/sac-operator/apis/access/v1"
 	"bitbucket.org/accezz-io/sac-operator/model"
+	"bitbucket.org/accezz-io/sac-operator/service"
 )
 
 // SiteConverter convert controller objects to service model
@@ -28,7 +29,7 @@ func (s *SiteConverter) ConvertToServiceModel(site *accessv1.Site) *model.Site {
 	return siteModel
 }
 
-func (s *SiteConverter) ConvertFromServiceModel(site *model.Site) accessv1.SiteStatus {
+func (s *SiteConverter) ConvertFromServiceOutput(site *service.SiteReconcileOutput) accessv1.SiteStatus {
 
 	siteStatus := accessv1.SiteStatus{}
 

@@ -9,5 +9,4 @@ type Site struct {
 	ConnectorsNamespace string
 	SiteNamespace       string
 	ToDelete            bool
-	Deleted             bool
 }

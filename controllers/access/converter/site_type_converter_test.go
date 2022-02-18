@@ -33,7 +33,7 @@ func TestSiteConverter_ConvertFromServiceModel(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &SiteConverter{}
-			site := s.ConvertFromServiceModel(tt.args.site)
+			site := s.ConvertFromServiceOutput(tt.args.site)
 			assert.Equal(t, tt.args.site.SACSiteID, site.ID)
 		})
 	}
