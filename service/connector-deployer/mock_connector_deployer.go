@@ -14,17 +14,24 @@ type MockConnectorDeployer struct {
 }
 
 // CreateConnector provides a mock function with given fields: ctx, inputs
-func (_m *MockConnectorDeployer) CreateConnector(ctx context.Context, inputs *CreateConnectorInput) error {
+func (_m *MockConnectorDeployer) CreateConnector(ctx context.Context, inputs *CreateConnectorInput) (string, error) {
 	ret := _m.Called(ctx, inputs)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *CreateConnectorInput) error); ok {
+	var r0 string
+	if rf, ok := ret.Get(0).(func(context.Context, *CreateConnectorInput) string); ok {
 		r0 = rf(ctx, inputs)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(string)
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *CreateConnectorInput) error); ok {
+		r1 = rf(ctx, inputs)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // DeleteConnector provides a mock function with given fields: ctx, Name

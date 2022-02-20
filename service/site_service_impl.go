@@ -2,11 +2,7 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"sort"
-
-	"bitbucket.org/accezz-io/sac-operator/service/repository"
 
 	"bitbucket.org/accezz-io/sac-operator/utils"
 
@@ -19,7 +15,6 @@ import (
 	"bitbucket.org/accezz-io/sac-operator/model"
 	"bitbucket.org/accezz-io/sac-operator/service/sac"
 	"bitbucket.org/accezz-io/sac-operator/service/sac/dto"
-	"github.com/google/uuid"
 )
 
 var UnrecoverableError = fmt.Errorf("unrecoverable error")
@@ -27,20 +22,17 @@ var UnrecoverableError = fmt.Errorf("unrecoverable error")
 type SiteServiceImpl struct {
 	connectorDeployer connector_deployer.ConnectorDeployer
 	sacClient         sac.SecureAccessCloudClient
-	repo              repository.Repository
 	log               logr.Logger
 }
 
 func NewSiteServiceImpl(sacClient sac.SecureAccessCloudClient,
 	connectorDeployer connector_deployer.ConnectorDeployer,
 	log logr.Logger,
-	repo repository.Repository,
 ) *SiteServiceImpl {
 	return &SiteServiceImpl{
 		sacClient:         sacClient,
 		connectorDeployer: connectorDeployer,
 		log:               log,
-		repo:              repo,
 	}
 }
 
@@ -71,70 +63,60 @@ func (s *SiteServiceImpl) Reconcile(ctx context.Context, site *model.Site) (*Sit
 		return output, err
 	}
 
-	var healthyConnectors []connector_deployer.Connector
-	var toDeleteConnectors []connector_deployer.Connector
-
 	for i := range connectors {
 		switch connectors[i].Status {
 		case connector_deployer.ToDeleteConnectorStatus:
-			toDeleteConnectors = append(toDeleteConnectors, connectors[i])
-			output.UnHealthyConnectors[connectors[i].DeploymentName] = connectors[i].SACID
+			output.UnHealthyConnectors = append(output.UnHealthyConnectors, Connectors{
+				CreatedTimestamp: connectors[i].CreatedTimeStamp,
+				DeploymentName:   connectors[i].DeploymentName,
+				SacID:            connectors[i].SACID,
+			})
 		case connector_deployer.OKConnectorStatus:
-			healthyConnectors = append(healthyConnectors, connectors[i])
-			output.HealthConnectors[connectors[i].DeploymentName] = connectors[i].SACID
+			output.HealthyConnectors = append(output.HealthyConnectors, Connectors{
+				CreatedTimestamp: connectors[i].CreatedTimeStamp,
+				DeploymentName:   connectors[i].DeploymentName,
+				SacID:            connectors[i].SACID,
+			})
 		}
 	}
 
 	s.log.WithValues("site", site.Name,
 		"desired", site.NumberOfConnectors,
-		"healthyConnectors", len(healthyConnectors),
-		"toDeleteConnectors", len(toDeleteConnectors)).
+		"healthyConnectors", len(output.HealthyConnectors),
+		"toDeleteConnectors", len(output.UnHealthyConnectors)).
 		Info("connectors status for site")
 
-	err = s.reconcileToDeleteConnectors(ctx, site, toDeleteConnectors)
-	if err != nil {
-		return output, err
+	if len(output.UnHealthyConnectors) > 0 {
+		for i := range output.UnHealthyConnectors {
+			err = s.deleteConnector(ctx, output.UnHealthyConnectors[i].SacID, output.UnHealthyConnectors[i].DeploymentName)
+			if err != nil {
+				return output, err
+			}
+			output.UnHealthyConnectors = append(output.UnHealthyConnectors[:i], output.UnHealthyConnectors[i+1:]...)
+		}
 	}
 
-	//var err error
-	//err = s.reconcileSiteInSAC(ctx, site)
-	//if err != nil {
-	//	return s.handleOutput(site, err)
-	//}
-	//if site.ToDelete {
-	//	return &SiteReconcileOutput{}, nil
-	//}
-	//
-	//connectors, err := s.connectorDeployer.GetConnectorsForSite(ctx, site.Name)
-	//if err != nil {
-	//	return s.handleOutput(site, err)
-	//}
-	//
-	//var healthyConnectors []connector_deployer.Connector
-	//var toDeleteConnectors []connector_deployer.Connector
-	//
-	//for i := range connectors {
-	//	switch connectors[i].Status {
-	//	case connector_deployer.ToDeleteConnectorStatus:
-	//		toDeleteConnectors = append(toDeleteConnectors, connectors[i])
-	//	case connector_deployer.OKConnectorStatus:
-	//		healthyConnectors = append(healthyConnectors, connectors[i])
-	//	}
-	//}
-	//
-	//s.log.WithValues("site", site.Name, "desired", site.NumberOfConnectors, "healthyConnectors", len(healthyConnectors), "toDeleteConnectors", len(toDeleteConnectors)).Info("connectors")
-	//
-	//err = s.reconcileToDeleteConnectors(ctx, site, toDeleteConnectors)
-	//if err != nil {
-	//	return s.handleOutput(site, err)
-	//}
-	//
-	//err = s.reconcileDesiredNumberOfConnectors(ctx, site, healthyConnectors)
-	//if err != nil {
-	//	return s.handleOutput(site, err)
-	//}
-	//
-	//return s.handleOutput(site, err)
+	switch {
+	case len(output.HealthyConnectors) == site.NumberOfConnectors:
+		break
+	case len(output.HealthyConnectors) < site.NumberOfConnectors:
+		for i := len(output.HealthyConnectors); i < site.NumberOfConnectors; i++ {
+			connector, err := s.createConnector(ctx, site)
+			if err != nil {
+				return output, err
+			}
+			output.HealthyConnectors = append(output.HealthyConnectors, connector)
+		}
+	case len(output.HealthyConnectors) > site.NumberOfConnectors:
+		sortConnectorsBtCreatedTimestamp(output.HealthyConnectors)
+		for i := len(output.HealthyConnectors); i > site.NumberOfConnectors; i-- {
+			err = s.deleteConnector(ctx, output.HealthyConnectors[i].SacID, output.HealthyConnectors[i].DeploymentName)
+			if err != nil {
+				return output, err
+			}
+			output.HealthyConnectors = append(output.HealthyConnectors[:i], output.HealthyConnectors[i+1:]...)
+		}
+	}
 
 	return output, nil
 }
@@ -164,67 +146,6 @@ func (s *SiteServiceImpl) deleteSiteInSAC(ctx context.Context, site *model.Site,
 	}
 
 	output.Deleted = true
-
-	return nil
-
-}
-
-func (s *SiteServiceImpl) reconcileToDeleteConnectors(ctx context.Context, site *model.Site, connectors []connector_deployer.Connector) error {
-
-	for i := range connectors {
-		s.log.WithValues(
-			"sac id", connectors[i].SACID,
-			"pod name", connectors[i].DeploymentName,
-		).Info("deleting unhealthy connector",
-			connectors[i].SACID,
-			connectors[i].DeploymentName,
-		)
-		err := s.deleteConnector(ctx, connectors[i].SACID, connectors[i].DeploymentName)
-		if err != nil {
-			return err
-		}
-		connectors = append(connectors[:i], connectors[i+1:]...) // if delete ended successfully, delete it from connectors list
-	}
-
-	return nil
-
-}
-
-func (s *SiteServiceImpl) reconcileDesiredNumberOfConnectors(ctx context.Context, site *model.Site, connectors []connector_deployer.Connector) error {
-
-	if site.ToDelete {
-		return nil
-	}
-
-	s.log.WithValues("site name", site.Name, "number of connectors", len(connectors), "desired number of connectors", site.NumberOfConnectors).Info("actual vs desired number of connectors")
-
-	if site.NumberOfConnectors == len(connectors) {
-		return nil
-	}
-
-	if site.NumberOfConnectors > len(connectors) {
-		for i := len(connectors); i < site.NumberOfConnectors; i++ {
-			err := s.createConnector(ctx, site)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	sort.Slice(connectors, func(i, j int) bool {
-		return connectors[i].CreatedTimeStamp.Before(connectors[j].CreatedTimeStamp)
-	})
-
-	if site.NumberOfConnectors < len(connectors) {
-		s.log.Info("deleting oldest connectors")
-		for i := len(connectors) - 1; i >= site.NumberOfConnectors; i-- {
-			err := s.deleteConnector(ctx, connectors[i].SACID, connectors[i].DeploymentName)
-			if err != nil {
-				return err
-			}
-		}
-	}
 
 	return nil
 
@@ -269,39 +190,36 @@ func (s *SiteServiceImpl) reconcilerDanglingConnectorsFromSAC(ctx context.Contex
 
 }
 
-func (s *SiteServiceImpl) createConnector(ctx context.Context, site *model.Site) error {
+func (s *SiteServiceImpl) createConnector(ctx context.Context, site *model.Site) (Connectors, error) {
+
+	connector := Connectors{}
 
 	siteDto, err := s.sacClient.FindSiteByName(site.Name)
 	if err != nil {
-		return err
+		return connector, err
 	}
 
-	connector, err := s.sacClient.CreateConnector(siteDto, s.getConnectorName(site))
+	sacConnector, err := s.sacClient.CreateConnector(siteDto, s.getConnectorName(site))
 	if err != nil {
-		return err
+		return connector, err
 	}
+	connector.SacID = sacConnector.ID
+	s.log.WithValues("id", sacConnector.ID, "name", sacConnector.Name).Info("created connector in sac")
 
-	s.log.WithValues("id", connector.ID, "name", connector.Name).Info("created connector in sac")
-	deployConnectorInput, err := s.getDeployConnectorInputs(connector, site)
-	if err != nil {
-		return err
-	}
+	deployConnectorInput := s.getDeployConnectorInputs(sacConnector, site)
 
-	err = s.connectorDeployer.CreateConnector(ctx, deployConnectorInput)
+	deploymentName, err := s.connectorDeployer.CreateConnector(ctx, deployConnectorInput)
 	if err != nil {
-		return err
+		return connector, err
 	}
+	connector.DeploymentName = deploymentName
 	s.log.Info("deployed new connector")
 
-	return nil
+	return connector, nil
 
 }
 
-func (s *SiteServiceImpl) getDeployConnectorInputs(connector *dto.ConnectorObjects, site *model.Site) (*connector_deployer.CreateConnectorInput, error) {
-	ConnectorID, err := uuid.Parse(connector.ID)
-	if err != nil {
-		return nil, err
-	}
+func (s *SiteServiceImpl) getDeployConnectorInputs(connector *dto.ConnectorObjects, site *model.Site) *connector_deployer.CreateConnectorInput {
 
 	envs := map[string]string{
 		"ENDPOINT_URL":           site.EndpointURL,
@@ -311,12 +229,12 @@ func (s *SiteServiceImpl) getDeployConnectorInputs(connector *dto.ConnectorObjec
 	}
 
 	return &connector_deployer.CreateConnectorInput{
-		ConnectorID:     &ConnectorID,
+		ConnectorID:     connector.ID,
 		SiteName:        site.Name,
 		Image:           "luminate/connector:2.10.1", //TODO: waiting for https://jira.luminate.io/browse/AC-27957
 		Name:            connector.Name,
 		EnvironmentVars: envs,
-	}, nil
+	}
 }
 
 func (s *SiteServiceImpl) getConnectorName(site *model.Site) string {
@@ -325,33 +243,18 @@ func (s *SiteServiceImpl) getConnectorName(site *model.Site) string {
 
 }
 
-func (s *SiteServiceImpl) deleteConnector(ctx context.Context, sacID, podID string) error {
+func (s *SiteServiceImpl) deleteConnector(ctx context.Context, sacID, podName string) error {
 
 	err := s.sacClient.DeleteConnector(sacID)
 	if err != nil {
 		return err
 	}
 
-	err = s.connectorDeployer.DeleteConnector(ctx, podID)
+	err = s.connectorDeployer.DeleteConnector(ctx, podName)
 	if err != nil {
 		return err
 	}
 
 	return nil
-
-}
-
-func (s *SiteServiceImpl) handleOutput(site *model.Site, err error) (*SiteReconcileOutput, error) {
-
-	if err == nil {
-		return &SiteReconcileOutput{}, nil
-	}
-
-	if errors.Is(err, UnrecoverableError) {
-		s.log.WithValues("site name", site.Name).Error(err, "unrecoverable error")
-		return &SiteReconcileOutput{}, nil
-	}
-
-	return &SiteReconcileOutput{}, err
 
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	connector_deployer "bitbucket.org/accezz-io/sac-operator/service/connector-deployer"
 
@@ -28,14 +27,13 @@ func TestSiteServiceImpl_Reconcile(t *testing.T) {
 		setupFunc func() (SiteService, *model.Site)
 		output    *SiteReconcileOutput
 		err       error
-		errTest   assert.ErrorAssertionFunc
 	}{
 		{
 			name: "nil site flow",
 			setupFunc: func() (SiteService, *model.Site) {
 				sacClient := &sac.MockSecureAccessCloudClient{}
 				testLog := ctrl.Log.WithName("test")
-				return NewSiteServiceImpl(sacClient, nil, testLog, nil), nil
+				return NewSiteServiceImpl(sacClient, nil, testLog), nil
 			},
 			output: &SiteReconcileOutput{},
 			err:    UnrecoverableError,
@@ -49,7 +47,7 @@ func TestSiteServiceImpl_Reconcile(t *testing.T) {
 				}
 				sacClient.On("DeleteSite", mock.AnythingOfType("string")).Return(nil)
 				testLog := ctrl.Log.WithName("test")
-				return NewSiteServiceImpl(sacClient, nil, testLog, nil), siteModel
+				return NewSiteServiceImpl(sacClient, nil, testLog), siteModel
 			},
 			output: &SiteReconcileOutput{
 				Deleted: true,
@@ -65,7 +63,7 @@ func TestSiteServiceImpl_Reconcile(t *testing.T) {
 				}
 				sacClient.On("DeleteSite", mock.AnythingOfType("string")).Return(uncategorizedError)
 				testLog := ctrl.Log.WithName("test")
-				return NewSiteServiceImpl(sacClient, nil, testLog, nil), siteModel
+				return NewSiteServiceImpl(sacClient, nil, testLog), siteModel
 			},
 			output: &SiteReconcileOutput{
 				Deleted: false,
@@ -87,7 +85,7 @@ func TestSiteServiceImpl_Reconcile(t *testing.T) {
 				}, nil)
 				deployer.On("GetConnectorsForSite", ctx, "test").Return([]connector_deployer.Connector{}, nil)
 				testLog := ctrl.Log.WithName("test")
-				return NewSiteServiceImpl(sacClient, deployer, testLog, nil), siteModel
+				return NewSiteServiceImpl(sacClient, deployer, testLog), siteModel
 			},
 			output: &SiteReconcileOutput{
 				SACSiteID: "uuid",
@@ -104,7 +102,7 @@ func TestSiteServiceImpl_Reconcile(t *testing.T) {
 				siteDto := dto.FromSiteModel(siteModel)
 				sacClient.On("CreateSite", siteDto).Return(&dto.SiteDTO{}, sac.ErrConflict)
 				testLog := ctrl.Log.WithName("test")
-				return NewSiteServiceImpl(sacClient, nil, testLog, nil), siteModel
+				return NewSiteServiceImpl(sacClient, nil, testLog), siteModel
 			},
 			output: &SiteReconcileOutput{},
 			err:    UnrecoverableError,
@@ -119,7 +117,7 @@ func TestSiteServiceImpl_Reconcile(t *testing.T) {
 				siteDto := dto.FromSiteModel(siteModel)
 				sacClient.On("CreateSite", siteDto).Return(&dto.SiteDTO{}, uncategorizedError)
 				testLog := ctrl.Log.WithName("test")
-				return NewSiteServiceImpl(sacClient, nil, testLog, nil), siteModel
+				return NewSiteServiceImpl(sacClient, nil, testLog), siteModel
 			},
 			output: &SiteReconcileOutput{},
 			err:    uncategorizedError,
@@ -136,7 +134,7 @@ func TestSiteServiceImpl_Reconcile(t *testing.T) {
 				connectorList := []connector_deployer.Connector{}
 				deployer.On("GetConnectorsForSite", ctx, "test").Return(connectorList, uncategorizedError)
 				testLog := ctrl.Log.WithName("test")
-				return NewSiteServiceImpl(nil, deployer, testLog, nil), siteModel
+				return NewSiteServiceImpl(nil, deployer, testLog), siteModel
 			},
 			output: &SiteReconcileOutput{
 				SACSiteID: "uuid",
@@ -155,31 +153,7 @@ func TestSiteServiceImpl_Reconcile(t *testing.T) {
 				connectorList := []connector_deployer.Connector{}
 				deployer.On("GetConnectorsForSite", ctx, "test").Return(connectorList, uncategorizedError)
 				testLog := ctrl.Log.WithName("test")
-				return NewSiteServiceImpl(nil, deployer, testLog, nil), siteModel
-			},
-			output: &SiteReconcileOutput{
-				SACSiteID: "uuid",
-			},
-			err: uncategorizedError,
-		},
-		{
-			name: "deleting toDelete connector failed in SAC",
-			setupFunc: func() (SiteService, *model.Site) {
-				ctx := context.Background()
-				deployer := &connector_deployer.MockConnectorDeployer{}
-				siteModel := &model.Site{
-					Name:      "test",
-					SACSiteID: "uuid",
-				}
-				connectorList := []connector_deployer.Connector{{
-					DeploymentName:   "",
-					SACID:            "",
-					Status:           "",
-					CreatedTimeStamp: time.Time{},
-				}}
-				deployer.On("GetConnectorsForSite", ctx, "test").Return(connectorList, uncategorizedError)
-				testLog := ctrl.Log.WithName("test")
-				return NewSiteServiceImpl(nil, deployer, testLog, nil), siteModel
+				return NewSiteServiceImpl(nil, deployer, testLog), siteModel
 			},
 			output: &SiteReconcileOutput{
 				SACSiteID: "uuid",

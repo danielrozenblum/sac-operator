@@ -18,8 +18,10 @@ package access
 
 import (
 	"context"
+	"errors"
+	"time"
 
-	"bitbucket.org/accezz-io/sac-operator/service/repository"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
 
@@ -35,12 +37,16 @@ import (
 
 	"bitbucket.org/accezz-io/sac-operator/service"
 
-	logger "sigs.k8s.io/controller-runtime/pkg/log"
-
 	accessv1 "bitbucket.org/accezz-io/sac-operator/apis/access/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+var (
+	siteFinalizerName = "sites.access.secure-access-cloud.symantec.com/finalizer"
+	podOwnerKey       = ".metadata.controller"
+	apiGVStr          = accessv1.GroupVersion.String()
 )
 
 // SiteReconcile reconciles a Site object
@@ -66,36 +72,24 @@ type SiteReconcile struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *SiteReconcile) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := logger.FromContext(ctx).WithValues("sac-site spec", req.NamespacedName)
 
 	siteCRD := &accessv1.Site{}
-
+	
 	if err := r.Get(ctx, req.NamespacedName, siteCRD); err != nil {
-		log.Error(err, "unable to fetch site")
+		r.Log.Error(err, "unable to fetch site from k8s api")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	siteModel := r.SiteConverter.ConvertToServiceModel(siteCRD)
-
-	serviceImpl := r.ServiceFacotry(ctx, siteCRD)
-
+	serviceImpl := r.serviceFactory(siteCRD)
 	output, err := serviceImpl.Reconcile(ctx, siteModel)
-	siteCRD.Status = r.SiteConverter.ConvertFromServiceOutput(output)
-	if err != nil {
-		log.Error(err, "got error from reconcile, trying to update last know status")
-		err = r.Status().Update(ctx, siteCRD)
-		if err != nil {
-			log.Error(err, "go error from reconcile, trying to update last know status")
-		}
+	if !controllerutil.ContainsFinalizer(siteCRD, siteFinalizerName) && output.SACSiteID != "" {
+		r.Log.WithValues("site", siteCRD.Name).Info("adding finalizer")
+		controllerutil.AddFinalizer(siteCRD, siteFinalizerName)
 	}
-	return ctrl.Result{}, nil
+	return r.handleReconcilerReturn(ctx, siteCRD, output, err)
 
 }
-
-var (
-	podOwnerKey = ".metadata.controller"
-	apiGVStr    = accessv1.GroupVersion.String()
-)
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *SiteReconcile) SetupWithManager(mgr ctrl.Manager) error {
@@ -123,13 +117,42 @@ func (r *SiteReconcile) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *SiteReconcile) ServiceFacotry(ctx context.Context, site *accessv1.Site) *service.SiteServiceImpl {
-
+func (r *SiteReconcile) serviceFactory(site *accessv1.Site) *service.SiteServiceImpl {
+	log := r.Log.WithValues("site", site.Name)
 	sacClient := sac.NewSecureAccessCloudClientImpl(r.SecureAccessCloudSettings)
-	k8sClients := connector_deployer.NewKubernetesImpl(r.Client, r.Scheme, podOwnerKey)
+	k8sClients := connector_deployer.NewKubernetesImpl(r.Client, r.Scheme, podOwnerKey, log)
 	k8sClients.ConnectorsNamespace = site.Spec.ConnectorsNamespace
 	k8sClients.SiteNamespace = site.Namespace
-	repo := repository.NewK8sImpl(r.Client, site.Namespace)
-	return service.NewSiteServiceImpl(sacClient, k8sClients, r.Log, repo)
+	return service.NewSiteServiceImpl(sacClient, k8sClients, log)
+}
+
+func (r *SiteReconcile) handleReconcilerReturn(ctx context.Context, siteCRD *accessv1.Site, output *service.SiteReconcileOutput, reconcileError error) (ctrl.Result, error) {
+
+	if errors.As(reconcileError, &service.UnrecoverableError) {
+		r.Log.WithValues("site", siteCRD.Name).Error(reconcileError, "got unrecoverable error, giving up...")
+		return ctrl.Result{}, nil
+	}
+
+	if output.Deleted {
+		controllerutil.RemoveFinalizer(siteCRD, siteFinalizerName)
+		if err := r.Update(ctx, siteCRD); err != nil {
+			r.Log.WithValues("site", siteCRD.Name).Error(err, "failed to remove Finalizer from site")
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	siteCRD.Status = r.SiteConverter.ConvertFromServiceOutput(output)
+
+	if reconcileError != nil {
+		r.Log.WithValues("site", siteCRD.Name).Error(reconcileError, "failed to reconcile, trying to update last known status")
+	}
+	err := r.Update(ctx, siteCRD)
+	if err != nil {
+		r.Log.WithValues("site", siteCRD.Name).Error(reconcileError, "failed to update site status, coming back in 30 seconds")
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
+	}
+
+	return ctrl.Result{}, reconcileError
 
 }

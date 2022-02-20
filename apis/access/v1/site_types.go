@@ -39,7 +39,10 @@ type SiteSpec struct {
 type SiteStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	ID string `json:"id"`
+	ID                        string            `json:"id"`
+	HealthyConnectors         map[string]string `json:"healthy_connectors"`
+	UnHealthyConnectors       map[string]string `json:"un_healthy_connectors"`
+	NumberOfHealthyConnectors int               `json:"number_of_healthy_connectors"`
 }
 
 //+kubebuilder:object:root=true

@@ -31,9 +31,21 @@ func (s *SiteConverter) ConvertToServiceModel(site *accessv1.Site) *model.Site {
 
 func (s *SiteConverter) ConvertFromServiceOutput(site *service.SiteReconcileOutput) accessv1.SiteStatus {
 
-	siteStatus := accessv1.SiteStatus{}
+	siteStatus := accessv1.SiteStatus{
+		ID:                        "",
+		HealthyConnectors:         map[string]string{},
+		UnHealthyConnectors:       map[string]string{},
+		NumberOfHealthyConnectors: 0,
+	}
 
 	siteStatus.ID = site.SACSiteID
+	for i := range site.HealthyConnectors {
+		siteStatus.HealthyConnectors[site.HealthyConnectors[i].DeploymentName] = site.HealthyConnectors[i].SacID
+	}
+	for i := range site.UnHealthyConnectors {
+		siteStatus.UnHealthyConnectors[site.UnHealthyConnectors[i].DeploymentName] = site.UnHealthyConnectors[i].SacID
+	}
+	siteStatus.NumberOfHealthyConnectors = len(site.HealthyConnectors)
 
 	return siteStatus
 }

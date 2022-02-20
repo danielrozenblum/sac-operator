@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"bitbucket.org/accezz-io/sac-operator/utils"
+
 	"k8s.io/apimachinery/pkg/util/rand"
 
 	"bitbucket.org/accezz-io/sac-operator/service/sac/dto"
@@ -18,12 +20,9 @@ type SecureAccessCloudClientTest struct {
 
 func (f *SecureAccessCloudClientTest) setup(t *testing.T) func(t *testing.T) {
 	settings := &SecureAccessCloudSettings{
-		//ClientID:     utils.GetMandatoryEnvironmentVariable(t, "SAC_CLIENT_ID"),
-		//ClientSecret: utils.GetMandatoryEnvironmentVariable(t, "SAC_CLIENT_SECRET"),
-		//TenantDomain: utils.GetMandatoryEnvironmentVariable(t, "SAC_TENANT_DOMAIN"),
-		ClientID:     "a0090f01e9d27ffd82f4981c39a65392",
-		ClientSecret: "f38b35a2e4eae78cbc85cc2ad745c6db5fdad6d179144279726ddfbd6112af02",
-		TenantDomain: "symchatbotdemo.luminatesite.com",
+		ClientID:     utils.GetMandatoryEnvironmentVariable(t, "SAC_CLIENT_ID"),
+		ClientSecret: utils.GetMandatoryEnvironmentVariable(t, "SAC_CLIENT_SECRET"),
+		TenantDomain: utils.GetMandatoryEnvironmentVariable(t, "SAC_TENANT_DOMAIN"),
 	}
 
 	sacClient := NewSecureAccessCloudClientImpl(settings)

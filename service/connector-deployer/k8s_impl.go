@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	accessv1 "bitbucket.org/accezz-io/sac-operator/apis/access/v1"
@@ -27,33 +29,32 @@ type KubernetesImpl struct {
 	SiteNamespace       string
 	ConnectorsNamespace string
 	podOwnerKey         string
+	log                 logr.Logger
 }
 
-func NewKubernetesImpl(client client.Client, scheme *runtime.Scheme, podOwnerKey string) *KubernetesImpl {
-	return &KubernetesImpl{Client: client, Scheme: scheme, podOwnerKey: podOwnerKey}
+func NewKubernetesImpl(client client.Client, scheme *runtime.Scheme, podOwnerKey string, log logr.Logger) *KubernetesImpl {
+	return &KubernetesImpl{Client: client, Scheme: scheme, podOwnerKey: podOwnerKey, log: log}
 }
 
-func (k *KubernetesImpl) CreateConnector(ctx context.Context, inputs *CreateConnectorInput) error {
+func (k *KubernetesImpl) CreateConnector(ctx context.Context, inputs *CreateConnectorInput) (string, error) {
 
 	site, err := k.getSite(ctx, inputs.SiteName)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	pod, err := k.getConnectorPodForSite(inputs, site)
-	if err != nil {
-		return err
-	}
+	pod := k.getConnectorPodForSite(inputs, site)
+	k.log.WithValues("pod", pod.Name).Info("creating connector in k8s")
 	err = k.Create(ctx, pod)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// TODO implement using watch - https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/source/example_test.go
 	count := 5
 	for i := 0; i < count; i-- {
 		if count == 0 {
-			return fmt.Errorf("onnector failed to reach stable state")
+			return "", fmt.Errorf("onnector failed to reach stable state")
 		}
 		time.Sleep(time.Second * 10)
 		err = k.Get(ctx, client.ObjectKey{Namespace: pod.Namespace, Name: pod.Name}, pod)
@@ -61,20 +62,21 @@ func (k *KubernetesImpl) CreateConnector(ctx context.Context, inputs *CreateConn
 			if apierrors.IsNotFound(err) {
 				continue
 			}
-			return err
+			return "", err
 		}
 		if pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready {
-			return nil
+			return pod.ObjectMeta.Name, err
 		}
+		k.log.WithValues("pod", pod.Name).Info("waiting for pod and container to be in running state")
 		count--
 	}
 
-	return nil
+	return pod.Name, nil
 }
 
 func (k *KubernetesImpl) DeleteConnector(ctx context.Context, name string) error {
 
-	err := k.Delete(ctx, &corev1.Pod{
+	podToDelete := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: k.ConnectorsNamespace,
@@ -82,7 +84,9 @@ func (k *KubernetesImpl) DeleteConnector(ctx context.Context, name string) error
 		},
 		Spec:   corev1.PodSpec{},
 		Status: corev1.PodStatus{},
-	})
+	}
+
+	err := k.Delete(ctx, podToDelete)
 	return client.IgnoreNotFound(err)
 
 }
@@ -129,7 +133,7 @@ func (k *KubernetesImpl) GetConnectorsForSite(ctx context.Context, siteName stri
 	return connectors, nil
 }
 
-func (k *KubernetesImpl) getConnectorPodForSite(inputs *CreateConnectorInput, site *accessv1.Site) (*corev1.Pod, error) {
+func (k *KubernetesImpl) getConnectorPodForSite(inputs *CreateConnectorInput, site *accessv1.Site) *corev1.Pod {
 
 	podEnvVar := []corev1.EnvVar{}
 
@@ -148,7 +152,7 @@ func (k *KubernetesImpl) getConnectorPodForSite(inputs *CreateConnectorInput, si
 			Namespace: k.ConnectorsNamespace,
 			Name:      podName,
 			Annotations: map[string]string{
-				fmt.Sprintf("%s/%s", annotationPrefix, "connector"): inputs.ConnectorID.String(),
+				fmt.Sprintf("%s/%s", annotationPrefix, "connector"): inputs.ConnectorID,
 				fmt.Sprintf("%s/%s", annotationPrefix, "site"):      inputs.SiteName,
 			},
 		},
@@ -165,12 +169,9 @@ func (k *KubernetesImpl) getConnectorPodForSite(inputs *CreateConnectorInput, si
 		},
 	}
 
-	err := ctrl.SetControllerReference(site, pod, k.Scheme)
-	if err != nil {
-		return nil, err
-	}
+	_ = ctrl.SetControllerReference(site, pod, k.Scheme)
 
-	return pod, nil
+	return pod
 
 }
 

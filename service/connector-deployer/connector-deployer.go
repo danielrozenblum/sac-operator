@@ -3,19 +3,14 @@ package connector_deployer
 import (
 	"context"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type CreateConnectorInput struct {
-	ConnectorID     *uuid.UUID
+	ConnectorID     string
 	SiteName        string
 	Image           string
 	Name            string
 	EnvironmentVars map[string]string
-}
-
-type GetConnectorsInput struct {
 }
 
 type ConnectorStatus string
@@ -34,7 +29,7 @@ type Connector struct {
 
 //go:generate mockery --name=ConnectorDeployer --inpackage --case=underscore --output=mockConnectorDeployerInterface
 type ConnectorDeployer interface {
-	CreateConnector(ctx context.Context, inputs *CreateConnectorInput) error
+	CreateConnector(ctx context.Context, inputs *CreateConnectorInput) (string, error)
 	DeleteConnector(ctx context.Context, Name string) error
 	GetConnectorsForSite(ctx context.Context, siteName string) ([]Connector, error)
 }
