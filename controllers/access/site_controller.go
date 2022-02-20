@@ -74,7 +74,7 @@ type SiteReconcile struct {
 func (r *SiteReconcile) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	siteCRD := &accessv1.Site{}
-	
+
 	if err := r.Get(ctx, req.NamespacedName, siteCRD); err != nil {
 		r.Log.Error(err, "unable to fetch site from k8s api")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -84,8 +84,11 @@ func (r *SiteReconcile) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	serviceImpl := r.serviceFactory(siteCRD)
 	output, err := serviceImpl.Reconcile(ctx, siteModel)
 	if !controllerutil.ContainsFinalizer(siteCRD, siteFinalizerName) && output.SACSiteID != "" {
-		r.Log.WithValues("site", siteCRD.Name).Info("adding finalizer")
 		controllerutil.AddFinalizer(siteCRD, siteFinalizerName)
+		if err := r.Update(ctx, siteCRD); err != nil {
+			r.Log.WithValues("site", siteCRD.Name).Info("failed to add finalizer")
+			return ctrl.Result{}, err
+		}
 	}
 	return r.handleReconcilerReturn(ctx, siteCRD, output, err)
 
@@ -147,7 +150,7 @@ func (r *SiteReconcile) handleReconcilerReturn(ctx context.Context, siteCRD *acc
 	if reconcileError != nil {
 		r.Log.WithValues("site", siteCRD.Name).Error(reconcileError, "failed to reconcile, trying to update last known status")
 	}
-	err := r.Update(ctx, siteCRD)
+	err := r.Status().Update(ctx, siteCRD)
 	if err != nil {
 		r.Log.WithValues("site", siteCRD.Name).Error(reconcileError, "failed to update site status, coming back in 30 seconds")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, err

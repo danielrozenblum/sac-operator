@@ -108,13 +108,14 @@ func (s *SiteServiceImpl) Reconcile(ctx context.Context, site *model.Site) (*Sit
 			output.HealthyConnectors = append(output.HealthyConnectors, connector)
 		}
 	case len(output.HealthyConnectors) > site.NumberOfConnectors:
-		sortConnectorsBtCreatedTimestamp(output.HealthyConnectors)
-		for i := len(output.HealthyConnectors); i > site.NumberOfConnectors; i-- {
+		numberOfConnectorsToDelete := len(output.HealthyConnectors) - site.NumberOfConnectors
+		sortConnectorsByOldestFirst(output.HealthyConnectors)
+		for i := 0; i < numberOfConnectorsToDelete; i++ {
 			err = s.deleteConnector(ctx, output.HealthyConnectors[i].SacID, output.HealthyConnectors[i].DeploymentName)
 			if err != nil {
 				return output, err
 			}
-			output.HealthyConnectors = append(output.HealthyConnectors[:i], output.HealthyConnectors[i+1:]...)
+			output.HealthyConnectors = output.HealthyConnectors[1:]
 		}
 	}
 
@@ -196,7 +197,7 @@ func (s *SiteServiceImpl) createConnector(ctx context.Context, site *model.Site)
 
 	siteDto, err := s.sacClient.FindSiteByName(site.Name)
 	if err != nil {
-		return connector, err
+		return connector, fmt.Errorf("FindSiteByName failed %w", err)
 	}
 
 	sacConnector, err := s.sacClient.CreateConnector(siteDto, s.getConnectorName(site))
@@ -245,11 +246,13 @@ func (s *SiteServiceImpl) getConnectorName(site *model.Site) string {
 
 func (s *SiteServiceImpl) deleteConnector(ctx context.Context, sacID, podName string) error {
 
+	s.log.WithValues("sac connector id", sacID).Info("deleting connector")
 	err := s.sacClient.DeleteConnector(sacID)
 	if err != nil {
 		return err
 	}
 
+	s.log.WithValues("pod name", podName).Info("deleting pod")
 	err = s.connectorDeployer.DeleteConnector(ctx, podName)
 	if err != nil {
 		return err

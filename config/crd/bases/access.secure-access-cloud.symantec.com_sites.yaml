@@ -66,6 +66,8 @@ spec:
                 type: string
               number_of_healthy_connectors:
                 type: integer
+              selector:
+                type: string
               un_healthy_connectors:
                 additionalProperties:
                   type: string
@@ -74,12 +76,17 @@ spec:
             - healthy_connectors
             - id
             - number_of_healthy_connectors
+            - selector
             - un_healthy_connectors
             type: object
         type: object
     served: true
     storage: true
     subresources:
+      scale:
+        labelSelectorPath: .status.selector
+        specReplicasPath: .spec.number_of_connectors
+        statusReplicasPath: .status.NumberOfHealthyConnectors
       status: {}
 status:
   acceptedNames:

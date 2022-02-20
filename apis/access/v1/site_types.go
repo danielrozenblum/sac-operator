@@ -43,10 +43,12 @@ type SiteStatus struct {
 	HealthyConnectors         map[string]string `json:"healthy_connectors"`
 	UnHealthyConnectors       map[string]string `json:"un_healthy_connectors"`
 	NumberOfHealthyConnectors int               `json:"number_of_healthy_connectors"`
+	Selector                  string            `json:"selector"` // this must be the string form of the selector
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:subresource:scale:specpath=.spec.number_of_connectors,statuspath=.status.NumberOfHealthyConnectors,selectorpath=.status.selector
 
 // Site is the Schema for the sites API
 type Site struct {

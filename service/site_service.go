@@ -17,7 +17,7 @@ type Connectors struct {
 	SacID            string
 }
 
-func sortConnectorsBtCreatedTimestamp(c []Connectors) {
+func sortConnectorsByOldestFirst(c []Connectors) {
 
 	sort.Slice(c, func(i, j int) bool {
 		return c[i].CreatedTimestamp.Before(c[j].CreatedTimestamp)
