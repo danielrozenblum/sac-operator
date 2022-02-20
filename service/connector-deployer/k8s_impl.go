@@ -87,6 +87,23 @@ func (k *KubernetesImpl) DeleteConnector(ctx context.Context, name string) error
 	}
 
 	err := k.Delete(ctx, podToDelete)
+	count := 5
+	for i := 0; i < count; i-- {
+		if count == 0 {
+			return fmt.Errorf("failed to valied connector deletion from cluster")
+		}
+		time.Sleep(time.Second * 10)
+		err = k.Get(ctx, client.ObjectKey{Namespace: k.ConnectorsNamespace, Name: name}, podToDelete)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			return fmt.Errorf("failed to valied connector deletion from cluster")
+		}
+		k.log.WithValues("pod", name).Info("waiting for pod to be deleted")
+		count--
+	}
+
 	return client.IgnoreNotFound(err)
 
 }

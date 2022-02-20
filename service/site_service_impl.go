@@ -110,13 +110,15 @@ func (s *SiteServiceImpl) Reconcile(ctx context.Context, site *model.Site) (*Sit
 	case len(output.HealthyConnectors) > site.NumberOfConnectors:
 		numberOfConnectorsToDelete := len(output.HealthyConnectors) - site.NumberOfConnectors
 		sortConnectorsByOldestFirst(output.HealthyConnectors)
+		deletedIndex := 0
 		for i := 0; i < numberOfConnectorsToDelete; i++ {
 			err = s.deleteConnector(ctx, output.HealthyConnectors[i].SacID, output.HealthyConnectors[i].DeploymentName)
 			if err != nil {
 				return output, err
 			}
-			output.HealthyConnectors = output.HealthyConnectors[1:]
+			deletedIndex = i
 		}
+		output.HealthyConnectors = output.HealthyConnectors[deletedIndex+1:]
 	}
 
 	return output, nil
