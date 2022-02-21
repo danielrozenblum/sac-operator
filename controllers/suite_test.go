@@ -14,11 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package access
+package controllers
 
 import (
+	"context"
+	"os"
 	"path/filepath"
 	"testing"
+
+	"bitbucket.org/accezz-io/sac-operator/controllers/access"
+
+	"bitbucket.org/accezz-io/sac-operator/service/sac"
+
+	"bitbucket.org/accezz-io/sac-operator/controllers/access/converter"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -37,9 +47,14 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var cfg *rest.Config
-var k8sClient client.Client
-var testEnv *envtest.Environment
+var (
+	cfg       *rest.Config
+	k8sClient client.Client
+	sacClient sac.SecureAccessCloudClient
+	testEnv   *envtest.Environment
+	ctx       context.Context
+	cancel    context.CancelFunc
+)
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -51,19 +66,19 @@ func TestAPIs(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-
+	ctx, cancel = context.WithCancel(context.TODO())
+	//useCluster := true
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
+		BinaryAssetsDirectory: filepath.Join("..", "testbin", "bin"),
+		//UseExistingCluster:    &useCluster,
 	}
 
 	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
-
-	err = accessv1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
 
 	err = accessv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
@@ -74,9 +89,42 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
+	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme.Scheme,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	sacClientID, sacClientSecret, sacTenantDomain := os.Getenv("SAC_CLIENT_ID"), os.Getenv("SAC_CLIENT_SECRET"), os.Getenv("SAC_TENANT_DOMAIN")
+	if sacClientID == "" || sacClientSecret == "" || sacTenantDomain == "" {
+		Fail("Missing environment variable required for tests. SAC_CLIENT_ID, SAC_CLIENT_SECRET and SAC_TENANT_DOMAIN must all be set.")
+	}
+
+	secureAccessCloudSettings := &sac.SecureAccessCloudSettings{
+		ClientID:     sacClientID,
+		ClientSecret: sacClientSecret,
+		TenantDomain: sacTenantDomain,
+	}
+	sacClient = sac.NewSecureAccessCloudClientImpl(secureAccessCloudSettings)
+
+	err = (&access.SiteReconcile{
+		Client:                    k8sManager.GetClient(),
+		Scheme:                    k8sManager.GetScheme(),
+		SecureAccessCloudSettings: secureAccessCloudSettings,
+		SiteConverter:             converter.NewSiteConverter(),
+		Log:                       ctrl.Log.WithName("test-site-reconcile"),
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	go func() {
+		defer GinkgoRecover()
+		err = k8sManager.Start(ctx)
+		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+	}()
+
 }, 60)
 
 var _ = AfterSuite(func() {
+	cancel()
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())

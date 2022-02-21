@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const annotationPrefix = "access.secure-access-cloud.symantec.com"
+const AnnotationPrefix = "access.secure-access-cloud.symantec.com"
 
 type KubernetesImpl struct {
 	client.Client
@@ -169,8 +169,8 @@ func (k *KubernetesImpl) getConnectorPodForSite(inputs *CreateConnectorInput, si
 			Namespace: k.ConnectorsNamespace,
 			Name:      podName,
 			Annotations: map[string]string{
-				fmt.Sprintf("%s/%s", annotationPrefix, "connector"): inputs.ConnectorID,
-				fmt.Sprintf("%s/%s", annotationPrefix, "site"):      inputs.SiteName,
+				fmt.Sprintf("%s/%s", AnnotationPrefix, "connector"): inputs.ConnectorID,
+				fmt.Sprintf("%s/%s", AnnotationPrefix, "site"):      inputs.SiteName,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -204,5 +204,5 @@ func (k *KubernetesImpl) getSite(ctx context.Context, siteName string) (*accessv
 }
 
 func (k *KubernetesImpl) connectorAnnotationKey() string {
-	return fmt.Sprintf("%s/%s", annotationPrefix, "connector")
+	return fmt.Sprintf("%s/%s", AnnotationPrefix, "connector")
 }

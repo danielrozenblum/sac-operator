@@ -152,10 +152,10 @@ func (r *SiteReconcile) handleReconcilerReturn(ctx context.Context, siteCRD *acc
 	}
 	err := r.Status().Update(ctx, siteCRD)
 	if err != nil {
-		r.Log.WithValues("site", siteCRD.Name).Error(reconcileError, "failed to update site status, coming back in 30 seconds")
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
+		r.Log.WithValues("site", siteCRD.Name).Error(reconcileError, "failed to update site status, coming back in 5 seconds")
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
 	}
 
-	return ctrl.Result{}, reconcileError
+	return ctrl.Result{RequeueAfter: 5 * time.Second}, reconcileError
 
 }

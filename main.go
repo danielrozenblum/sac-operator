@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"bitbucket.org/accezz-io/sac-operator/service/sac"
@@ -98,10 +99,16 @@ func main() {
 		}
 	}
 
+	sacClientID, sacClientSecret, sacTenantDomain := os.Getenv("SAC_CLIENT_ID"), os.Getenv("SAC_CLIENT_SECRET"), os.Getenv("SAC_TENANT_DOMAIN")
+	if sacClientID == "" || sacClientSecret == "" || sacTenantDomain == "" {
+		setupLog.Error(fmt.Errorf("missing environment variable required for tests. SAC_CLIENT_ID, SAC_CLIENT_SECRET and SAC_TENANT_DOMAIN must all be set"), "")
+		os.Exit(1)
+	}
+
 	secureAccessCloudSettings := &sac.SecureAccessCloudSettings{
-		ClientID:     os.Getenv("SAC_CLIENT_ID"),
-		ClientSecret: os.Getenv("SAC_CLIENT_SECRET"),
-		TenantDomain: os.Getenv("SAC_TENANT_DOMAIN"),
+		ClientID:     sacClientID,
+		ClientSecret: sacClientSecret,
+		TenantDomain: sacTenantDomain,
 	}
 
 	siteReconcilerLogger := ctrl.Log.WithName("site-reconcile")
