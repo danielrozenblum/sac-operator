@@ -5,7 +5,7 @@ metadata:
 spec:
   service:
     name: auth-service
-    portName: main
+    port: "8080"
   site: operator-site-1
   type: HTTP
   accessPolicies: [ rnd-policy, product-policy ]

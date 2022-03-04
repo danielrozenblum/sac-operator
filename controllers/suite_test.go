@@ -107,11 +107,11 @@ var _ = BeforeSuite(func() {
 	sacClient = sac.NewSecureAccessCloudClientImpl(secureAccessCloudSettings)
 
 	err = (&access.SiteReconcile{
-		Client:                    k8sManager.GetClient(),
-		Scheme:                    k8sManager.GetScheme(),
-		SecureAccessCloudSettings: secureAccessCloudSettings,
-		SiteConverter:             converter.NewSiteConverter(),
-		Log:                       ctrl.Log.WithName("test-site-reconcile"),
+		Client:                  k8sManager.GetClient(),
+		Scheme:                  k8sManager.GetScheme(),
+		SecureAccessCloudClient: sacClient,
+		SiteConverter:           converter.NewSiteConverter(),
+		Log:                     ctrl.Log.WithName("test-site-reconcile"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

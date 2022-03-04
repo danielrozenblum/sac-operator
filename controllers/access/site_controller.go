@@ -52,10 +52,10 @@ var (
 // SiteReconcile reconciles a Site object
 type SiteReconcile struct {
 	client.Client
-	Scheme                    *runtime.Scheme
-	SiteConverter             *converter.SiteConverter
-	SecureAccessCloudSettings *sac.SecureAccessCloudSettings
-	Log                       logr.Logger
+	Scheme                  *runtime.Scheme
+	SiteConverter           *converter.SiteConverter
+	SecureAccessCloudClient sac.SecureAccessCloudClient
+	Log                     logr.Logger
 }
 
 //+kubebuilder:rbac:groups=access.secure-access-cloud.symantec.com,resources=sites,verbs=get;list;watch;create;update;patch;delete
@@ -122,7 +122,7 @@ func (r *SiteReconcile) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *SiteReconcile) serviceFactory(site *accessv1.Site) *service.SiteServiceImpl {
 	log := r.Log.WithValues("site", site.Name)
-	sacClient := sac.NewSecureAccessCloudClientImpl(r.SecureAccessCloudSettings)
+	sacClient := r.SecureAccessCloudClient
 	k8sClients := connector_deployer.NewKubernetesImpl(r.Client, r.Scheme, podOwnerKey, log)
 	k8sClients.ConnectorsNamespace = site.Spec.ConnectorsNamespace
 	k8sClients.SiteNamespace = site.Namespace

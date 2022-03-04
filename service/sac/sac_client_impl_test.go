@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"bitbucket.org/accezz-io/sac-operator/model"
+
 	"bitbucket.org/accezz-io/sac-operator/utils"
 
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -121,5 +123,76 @@ func TestCreateSite(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, connector)
 	assert.NotEmpty(t, connector.Otp)
+
+}
+
+func TestCreateApplication(t *testing.T) {
+	// given
+	tearDown := sacClientTest.setup(t)
+	applicationName := fmt.Sprintf("create-application-%s", rand.String(4))
+	application := &dto.ApplicationDTO{}
+	defer func() {
+		err := sacClientTest.client.DeleteApplication(application.ID)
+		if err != nil {
+			t.Errorf("failed deleteing application %+v", application)
+		}
+	}()
+	defer tearDown(t)
+
+	// when
+	application, err := sacClientTest.client.CreateApplication(&dto.ApplicationDTO{
+		Name: applicationName,
+		Type: model.HTTP,
+		ConnectionSettings: dto.ConnectionSettingsDTO{
+			InternalAddress: "https://httpbin.org/",
+		},
+		Icon:                  nil,
+		IsVisible:             false,
+		IsNotificationEnabled: false,
+		Enabled:               false,
+	})
+
+	// then
+	assert.NoError(t, err)
+	assert.NotEmpty(t, application)
+	assert.Equal(t, applicationName, application.Name)
+
+}
+
+func TestBindApplicationToSite(t *testing.T) {
+	// given
+	tearDown := sacClientTest.setup(t)
+	applicationName := fmt.Sprintf("operator-application-%s", rand.String(4))
+	siteName := fmt.Sprintf("operator-site-%s", rand.String(4))
+	application := &dto.ApplicationDTO{}
+	site := &dto.SiteDTO{}
+	defer func() {
+		err := sacClientTest.client.DeleteSite(site.ID)
+		if err != nil {
+			t.Errorf("failed deleteing site %+v", application)
+		}
+		err = sacClientTest.client.DeleteApplication(application.ID)
+		if err != nil {
+			t.Errorf("failed deleteing application %+v", application)
+		}
+	}()
+	defer tearDown(t)
+
+	// when
+	application, err := sacClientTest.client.CreateApplication(&dto.ApplicationDTO{
+		Name: applicationName,
+		Type: model.HTTP,
+		ConnectionSettings: dto.ConnectionSettingsDTO{
+			InternalAddress: "https://httpbin.org/",
+		},
+	})
+	assert.NoError(t, err)
+	site, err = sacClientTest.client.CreateSite(&dto.SiteDTO{
+		Name: siteName,
+	})
+	assert.NoError(t, err)
+	err = sacClientTest.client.BindApplicationToSite(application.ID, site.ID)
+	assert.NoError(t, err)
+	// then
 
 }

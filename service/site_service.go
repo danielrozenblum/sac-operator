@@ -2,14 +2,11 @@ package service
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"time"
 
 	"bitbucket.org/accezz-io/sac-operator/model"
 )
-
-var SiteAlreadyExist = errors.New("site already exist")
 
 type Connectors struct {
 	CreatedTimestamp time.Time

@@ -2,24 +2,23 @@ package dto
 
 import (
 	"bitbucket.org/accezz-io/sac-operator/model"
-	"github.com/google/uuid"
 )
 
 type ApplicationDTO struct {
-	ID                    *uuid.UUID               `json:"id"`
-	Name                  string                   `json:"name"`
-	Type                  model.ApplicationType    `json:"type"`
-	SubType               model.ApplicationSubType `json:"subType"`
-	ConnectionSettings    ConnectionSettingsDTO    `json:"connectionSettings"`
-	Icon                  *string                  `json:"icon"`
-	IsVisible             bool                     `json:"isVisible"`
-	IsNotificationEnabled bool                     `json:"isNotificationEnabled"`
-	Enabled               bool                     `json:"enabled"`
+	ID                    string                   `json:"id,omitempty"`
+	Name                  string                   `json:"name,omitempty"`
+	Type                  model.ApplicationType    `json:"type,omitempty"`
+	SubType               model.ApplicationSubType `json:"subType,omitempty"`
+	ConnectionSettings    ConnectionSettingsDTO    `json:"connectionSettings,omitempty"`
+	Icon                  *string                  `json:"icon,omitempty"`
+	IsVisible             bool                     `json:"isVisible,omitempty"`
+	IsNotificationEnabled bool                     `json:"isNotificationEnabled,omitempty"`
+	Enabled               bool                     `json:"enabled,omitempty"`
 }
 
 type ConnectionSettingsDTO struct {
-	InternalAddress string `json:"internalAddress"`
-	SubDomain       string `json:"subDomain"`
+	InternalAddress string `json:"internalAddress,omitempty"`
+	SubDomain       string `json:"subDomain,omitempty"`
 }
 
 type ApplicationPageDTO struct {

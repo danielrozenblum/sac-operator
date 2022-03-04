@@ -10,10 +10,10 @@ type ApplicationDTOBuilder struct {
 }
 
 func NewApplicationDTOBuilder() *ApplicationDTOBuilder {
-	applicationId := uuid.New()
+	applicationId := uuid.New().String()
 
 	return &ApplicationDTOBuilder{dto: &ApplicationDTO{
-		ID:                    &applicationId,
+		ID:                    applicationId,
 		Name:                  "test",
 		Type:                  model.DefaultType,
 		SubType:               model.DefaultSubType,
@@ -25,7 +25,7 @@ func NewApplicationDTOBuilder() *ApplicationDTOBuilder {
 	}}
 }
 
-func (a *ApplicationDTOBuilder) WithID(id *uuid.UUID) *ApplicationDTOBuilder {
+func (a *ApplicationDTOBuilder) WithID(id string) *ApplicationDTOBuilder {
 	a.dto.ID = id
 	return a
 }

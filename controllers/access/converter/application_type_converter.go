@@ -1,11 +1,14 @@
 package converter
 
 import (
+	"fmt"
+	"strings"
+
+	"bitbucket.org/accezz-io/sac-operator/service"
+
 	accessv1 "bitbucket.org/accezz-io/sac-operator/apis/access/v1"
 	"bitbucket.org/accezz-io/sac-operator/model"
 	"bitbucket.org/accezz-io/sac-operator/utils"
-	"bitbucket.org/accezz-io/sac-operator/utils/typederror"
-	"strings"
 )
 
 type ApplicationTypeConverter struct{}
@@ -14,19 +17,14 @@ func NewApplicationTypeConverter() *ApplicationTypeConverter {
 	return &ApplicationTypeConverter{}
 }
 
-func (a *ApplicationTypeConverter) ConvertToModel(application accessv1.Application) (*model.Application, error) {
-
-	applicationId, err := utils.FromUIDType(application.Status.Id)
-	if err != nil {
-		return nil, typederror.WrapError(typederror.UnrecoverableError, err)
-	}
+func (a *ApplicationTypeConverter) ConvertToModel(application *accessv1.Application) *model.Application {
 
 	applicationName := utils.GetStringPtrValueOrDefault(application.Spec.Name, application.Namespace+"-"+application.Spec.Service.Name)
 	applicationType := utils.GetApplicationTypeOrDefault(application.Spec.Type, model.DefaultType)
 	applicationSubType := utils.GetApplicationSubTypeOrDefault(application.Spec.SubType, model.DefaultSubType)
 
 	return &model.Application{
-		ID:               applicationId,
+		ID:               application.Status.Id,
 		Name:             a.convertToValidSACApplicationName(applicationName),
 		Type:             applicationType,
 		SubType:          applicationSubType,
@@ -34,7 +32,8 @@ func (a *ApplicationTypeConverter) ConvertToModel(application accessv1.Applicati
 		Site:             application.Spec.Site,
 		AccessPolicies:   application.Spec.AccessPolicies,
 		ActivityPolicies: application.Spec.ActivityPolicies,
-	}, nil
+		ToDelete:         !application.ObjectMeta.DeletionTimestamp.IsZero(),
+	}
 }
 
 func (a *ApplicationTypeConverter) convertToValidSACApplicationName(value string) string {
@@ -49,7 +48,11 @@ func (a *ApplicationTypeConverter) convertToValidSACApplicationName(value string
 
 func (a *ApplicationTypeConverter) convertToInternalAddress(applicationType model.ApplicationType, service accessv1.Service) string {
 	schema := a.convertToSchema(applicationType, service)
-	return schema + service.Name + ":" + service.Port
+	namespace := "default"
+	if service.Namespace != "" {
+		namespace = service.Namespace
+	}
+	return fmt.Sprintf("%s://%s.%s:%s", schema, service.Name, namespace, service.Port)
 }
 
 func (a *ApplicationTypeConverter) convertToSchema(applicationType model.ApplicationType, service accessv1.Service) string {
@@ -59,17 +62,21 @@ func (a *ApplicationTypeConverter) convertToSchema(applicationType model.Applica
 
 	switch applicationType {
 	case model.SSH, model.DynamicSSH, model.RDP, model.TCP:
-		return "tcp://"
+		return "tcp"
 	case model.HTTP:
 		{
 			switch service.Port {
 			case "443", "8443":
-				return "https://"
+				return "https"
 			default:
-				return "http://"
+				return "http"
 			}
 		}
 	default:
-		return "http://"
+		return "http"
 	}
+}
+
+func (a ApplicationTypeConverter) ConvertFromServiceOutput(output *service.ApplicationReconcileOutput) accessv1.ApplicationStatus {
+	return accessv1.ApplicationStatus{}
 }

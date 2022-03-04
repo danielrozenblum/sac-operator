@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"testing"
+
+	"bitbucket.org/accezz-io/sac-operator/utils/typederror"
 
 	connector_deployer "bitbucket.org/accezz-io/sac-operator/service/connector-deployer"
 
@@ -21,7 +22,7 @@ import (
 )
 
 func TestSiteServiceImpl_Reconcile(t *testing.T) {
-	uncategorizedError := fmt.Errorf("")
+	uncategorizedError := typederror.UnknownError
 	tests := []struct {
 		name      string
 		setupFunc func() (SiteService, *model.Site)
@@ -36,7 +37,7 @@ func TestSiteServiceImpl_Reconcile(t *testing.T) {
 				return NewSiteServiceImpl(sacClient, nil, testLog), nil
 			},
 			output: &SiteReconcileOutput{},
-			err:    UnrecoverableError,
+			err:    typederror.UnrecoverableError,
 		},
 		{
 			name: "delete site happy flow",
@@ -105,7 +106,7 @@ func TestSiteServiceImpl_Reconcile(t *testing.T) {
 				return NewSiteServiceImpl(sacClient, nil, testLog), siteModel
 			},
 			output: &SiteReconcileOutput{},
-			err:    UnrecoverableError,
+			err:    typederror.UnrecoverableError,
 		},
 		{
 			name: "create site err flow",

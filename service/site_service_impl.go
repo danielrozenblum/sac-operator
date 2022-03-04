@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"bitbucket.org/accezz-io/sac-operator/utils/typederror"
+
 	"bitbucket.org/accezz-io/sac-operator/utils"
 
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -16,8 +18,6 @@ import (
 	"bitbucket.org/accezz-io/sac-operator/service/sac"
 	"bitbucket.org/accezz-io/sac-operator/service/sac/dto"
 )
-
-var UnrecoverableError = fmt.Errorf("unrecoverable error")
 
 type SiteServiceImpl struct {
 	connectorDeployer connector_deployer.ConnectorDeployer
@@ -41,7 +41,7 @@ func (s *SiteServiceImpl) Reconcile(ctx context.Context, site *model.Site) (*Sit
 
 	if site == nil {
 		s.log.Error(fmt.Errorf(""), "site model cannot be nil")
-		return output, UnrecoverableError
+		return output, typederror.UnrecoverableError
 	}
 
 	if site.ToDelete {
@@ -130,7 +130,7 @@ func (s *SiteServiceImpl) createSiteInSAC(ctx context.Context, site *model.Site,
 	siteDto, err := s.sacClient.CreateSite(sacSite)
 	if err != nil {
 		if sac.IsConflict(err) {
-			return fmt.Errorf("%w site already exist", UnrecoverableError)
+			return fmt.Errorf("%w site already exist", typederror.UnrecoverableError)
 		}
 		return err
 	}

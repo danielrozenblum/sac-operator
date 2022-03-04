@@ -20,7 +20,6 @@ import (
 	"bitbucket.org/accezz-io/sac-operator/model"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 type Service struct {
@@ -29,10 +28,14 @@ type Service struct {
 	// The service name
 	Name string `json:"name,omitempty"`
 
+	// The service namespace (default is default)
+	// +optional
+	Namespace string `json:"namespace"`
+
 	//+kubebuilder:validation:MinLength=0
 
 	// The port name that will be exposed by this application.
-	Port string `json:"portName,omitempty"`
+	Port string `json:"port,omitempty"`
 
 	// Protocol Schema (default is based on port and application type)
 	// +optional
@@ -84,7 +87,7 @@ type ApplicationStatus struct {
 
 	// The application-id in Secure-Access-Cloud backend (if exists)
 	// +optional
-	Id *types.UID `json:"id,omitempty"`
+	Id string `json:"id,omitempty"`
 
 	// Information when was the last time the application was successfully modified by the operator.
 	// +optional

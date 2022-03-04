@@ -9,11 +9,11 @@ type ApplicationBuilder struct {
 }
 
 func NewApplicationBuilder() *ApplicationBuilder {
-	applicationId := uuid.New()
+	applicationId := uuid.New().String()
 
 	return &ApplicationBuilder{
 		application: &Application{
-			ID:               &applicationId,
+			ID:               applicationId,
 			Name:             "application-test",
 			Type:             HTTP,
 			SubType:          DefaultSubType,
@@ -25,7 +25,7 @@ func NewApplicationBuilder() *ApplicationBuilder {
 	}
 }
 
-func (a *ApplicationBuilder) WithID(id *uuid.UUID) *ApplicationBuilder {
+func (a *ApplicationBuilder) WithID(id string) *ApplicationBuilder {
 	a.application.ID = id
 	return a
 }

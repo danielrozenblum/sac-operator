@@ -58,7 +58,10 @@ spec:
                     description: The service name
                     minLength: 0
                     type: string
-                  portName:
+                  namespace:
+                    description: The service namespace (default is default)
+                    type: string
+                  port:
                     description: The port name that will be exposed by this application.
                     minLength: 0
                     type: string

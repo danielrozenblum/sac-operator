@@ -1,39 +1,11 @@
 package typederror
 
-import "fmt"
+import "github.com/pkg/errors"
 
-type ErrorType string
+type ErrorType error
 
-const (
-	UnknownError          ErrorType = "UnknownError"
-	UnrecoverableError              = "UnrecoverableError"
-	PartiallySuccessError           = "PartiallySuccessError"
+var (
+	UnknownError          = errors.New("UnknownError")
+	UnrecoverableError    = errors.New("UnrecoverableError")
+	PartiallySuccessError = errors.New("PartiallySuccessError")
 )
-
-func (e ErrorType) String() string {
-	return e.String()
-}
-
-type TypedError struct {
-	Type ErrorType
-	Err  error
-}
-
-func WrapError(errorType ErrorType, err error) error {
-	return TypedError{Type: errorType, Err: err}
-}
-
-func (e TypedError) Unwrap() error { return e.Err }
-
-func (e TypedError) Error() string {
-	return fmt.Sprintf("error %v (type: '%s')", e.Err, e.Type)
-}
-
-func IsErrorType(errorType ErrorType, err error) bool {
-	typedError, ok := err.(TypedError)
-	if !ok {
-		return false
-	}
-
-	return typedError.Type == errorType
-}

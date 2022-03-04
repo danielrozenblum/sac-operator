@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"github.com/google/uuid"
 	"time"
 )
 
@@ -28,7 +27,7 @@ type PolicyDTO struct {
 	DirectoryEntities []DirectoryEntityDTO `json:"directoryEntities"`
 	Enabled           bool                 `json:"enabled"`
 	FilterConditions  []interface{}        `json:"filterConditions"`
-	ID                *uuid.UUID           `json:"id"`
+	ID                string               `json:"id"`
 	IsDefault         bool                 `json:"isDefault"`
 	ModifiedOn        time.Time            `json:"modifiedOn"`
 	Name              string               `json:"name"`

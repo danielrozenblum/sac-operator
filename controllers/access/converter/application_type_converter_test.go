@@ -1,11 +1,12 @@
 package converter
 
 import (
+	"testing"
+
 	accessv1 "bitbucket.org/accezz-io/sac-operator/apis/access/v1"
 	"bitbucket.org/accezz-io/sac-operator/model"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestConvertToModelWhenHTTP(t *testing.T) {
@@ -19,10 +20,9 @@ func TestConvertToModelWhenHTTP(t *testing.T) {
 	application := buildTestApplication(applicationName, siteID, accessPolicies)
 
 	// when
-	result, err := converter.ConvertToModel(application)
+	result := converter.ConvertToModel(application)
 
 	// then
-	assert.NoError(t, err)
 	assert.Nil(t, result.ID)
 	assert.Equal(t, applicationName, result.Name)
 	assert.Equal(t, model.DefaultType, result.Type)
@@ -41,10 +41,9 @@ func TestConvertToModelWhenHTTPS(t *testing.T) {
 	application.Spec.Service.Port = "443"
 
 	// when
-	result, err := converter.ConvertToModel(application)
+	result := converter.ConvertToModel(application)
 
 	// then
-	assert.NoError(t, err)
 	assert.Nil(t, result.ID)
 	assert.Equal(t, "test-application", result.Name)
 	assert.Equal(t, model.DefaultType, result.Type)
@@ -72,6 +71,6 @@ func buildTestApplication(applicationName string, siteID string, accessPolicies 
 			AccessPolicies:   accessPolicies,
 			ActivityPolicies: []string{},
 		},
-		Status: accessv1.ApplicationStatus{Id: nil},
+		Status: accessv1.ApplicationStatus{Id: ""},
 	}
 }

@@ -1,14 +1,19 @@
 package service
 
 import (
-	"bitbucket.org/accezz-io/sac-operator/model"
 	"context"
-	"github.com/google/uuid"
+
+	"bitbucket.org/accezz-io/sac-operator/model"
 )
 
 //go:generate mockery -name ApplicationService -inpkg -case=underscore -output MockApplicationService
 type ApplicationService interface {
-	Create(ctx context.Context, applicationToCreate *model.Application) (*model.Application, error)
-	Update(ctx context.Context, updatedApplication *model.Application) (*model.Application, error)
-	Delete(ctx context.Context, id uuid.UUID) error
+	Reconcile(ctx context.Context, applicationToCreate *model.Application) (*ApplicationReconcileOutput, error)
+}
+
+type ApplicationReconcileOutput struct {
+	Deleted           bool
+	SACApplicationID  string
+	SiteID            string
+	AccessPoliciesIDs []string
 }

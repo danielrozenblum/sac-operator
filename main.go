@@ -111,22 +111,26 @@ func main() {
 		TenantDomain: sacTenantDomain,
 	}
 
+	sacClient := sac.NewSecureAccessCloudClientImpl(secureAccessCloudSettings)
+
 	siteReconcilerLogger := ctrl.Log.WithName("site-reconcile")
 	if err = (&accesscontrollers.SiteReconcile{
-		Client:                    mgr.GetClient(),
-		Scheme:                    mgr.GetScheme(),
-		SecureAccessCloudSettings: secureAccessCloudSettings,
-		SiteConverter:             converter.NewSiteConverter(),
-		Log:                       siteReconcilerLogger,
+		Client:                  mgr.GetClient(),
+		Scheme:                  mgr.GetScheme(),
+		SecureAccessCloudClient: sacClient,
+		SiteConverter:           converter.NewSiteConverter(),
+		Log:                     siteReconcilerLogger,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Site")
 		os.Exit(1)
 	}
+	applicationReconcilerLogger := ctrl.Log.WithName("application-reconcile")
 	if err = (&accesscontrollers.ApplicationReconciler{
 		Client:               mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
 		ApplicationConverter: converter.NewApplicationTypeConverter(),
-		ApplicationService:   service.NewDummyApplicationServiceImpl(),
+		ApplicationService:   service.NewApplicationServiceImpl(sacClient, applicationReconcilerLogger),
+		Log:                  applicationReconcilerLogger,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)

@@ -2,11 +2,10 @@ package model
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 )
 
 type Application struct {
-	ID               *uuid.UUID
+	ID               string
 	Name             string
 	Type             ApplicationType
 	SubType          ApplicationSubType
@@ -14,6 +13,7 @@ type Application struct {
 	Site             string
 	AccessPolicies   []string
 	ActivityPolicies []string
+	ToDelete         bool
 }
 
 func (a *Application) String() string {
@@ -32,7 +32,7 @@ const (
 )
 
 func (a ApplicationType) String() string {
-	return a.String()
+	return string(a)
 }
 
 type ApplicationSubType string
@@ -47,5 +47,5 @@ const (
 )
 
 func (a ApplicationSubType) String() string {
-	return a.String()
+	return string(a)
 }

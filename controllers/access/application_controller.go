@@ -17,13 +17,16 @@ limitations under the License.
 package access
 
 import (
-	"bitbucket.org/accezz-io/sac-operator/controllers/access/converter"
-	"bitbucket.org/accezz-io/sac-operator/model"
-	"bitbucket.org/accezz-io/sac-operator/service"
-	"bitbucket.org/accezz-io/sac-operator/utils"
-	"bitbucket.org/accezz-io/sac-operator/utils/typederror"
 	"context"
+	"errors"
+	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	"github.com/go-logr/logr"
+
+	"bitbucket.org/accezz-io/sac-operator/controllers/access/converter"
+	"bitbucket.org/accezz-io/sac-operator/service"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +41,7 @@ type ApplicationReconciler struct {
 	Scheme               *runtime.Scheme
 	ApplicationService   service.ApplicationService
 	ApplicationConverter *converter.ApplicationTypeConverter
+	Log                  logr.Logger
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -66,84 +70,46 @@ func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logger.FromContext(ctx).WithValues("sac-application spec", req.NamespacedName)
 
-	// 1. Load the application by name (namespaced name) from the Kubernetes Cluster (both spec & status).
-	var application accessv1.Application
-	var updatedApplicationOnSac *model.Application
+	application := &accessv1.Application{}
+	//var updatedApplicationOnSac *model.Application
 
-	if err := r.Get(ctx, req.NamespacedName, &application); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, application); err != nil {
 		log.Error(err, "unable to fetch application")
-		// we'll ignore not-found errors, since they can't be fixed by an immediate
-		// requeue (we'll need to wait for a new notification), and we can get them
-		// on deleted requests.
-		// TODO should delete application here? or use finalizers?
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// 2. Compare to the application configured on Secure-Access-Cloud:
-	// 	2.1. In case not found, create the application (application-id not found on the status)
-	if application.Status.Id == nil {
-		var err error
-		applicationModel, err := r.ApplicationConverter.ConvertToModel(application)
-		if err != nil {
-			return r.handleError(err)
-		}
+	applicationModel := r.ApplicationConverter.ConvertToModel(application)
+	reconcileOutput, err := r.ApplicationService.Reconcile(ctx, applicationModel)
+	return r.handleReconcilerReturn(ctx, application, reconcileOutput, err)
 
-		updatedApplicationOnSac, err = r.ApplicationService.Create(ctx, applicationModel)
-		if err != nil && !typederror.IsErrorType(typederror.PartiallySuccessError, err) {
-			return r.handleError(err)
-		}
-	} else {
-		//	2.2. In case found, compare the application configured on Secure-Access-Cloud to the desired state in the spec
-		applicationModel, err := r.ApplicationConverter.ConvertToModel(application)
-		if err != nil {
-			return r.handleError(err)
-		}
+}
 
-		updatedApplicationOnSac, err = r.ApplicationService.Update(ctx, applicationModel)
-		if err != nil && !typederror.IsErrorType(typederror.PartiallySuccessError, err) {
-			return r.handleError(err)
-		}
+func (r *ApplicationReconciler) handleReconcilerReturn(ctx context.Context, application *accessv1.Application, output *service.ApplicationReconcileOutput, reconcileError error) (ctrl.Result, error) {
+	if errors.Is(reconcileError, service.UnrecoverableError) {
+		r.Log.WithValues("application", application.Name).Error(reconcileError, "got unrecoverable error, giving up...")
+		return ctrl.Result{Requeue: false}, nil
 	}
 
-	// 3. Update the application status
-	err := r.updateApplicationState(ctx, log, &application, updatedApplicationOnSac)
+	if output.Deleted {
+		controllerutil.RemoveFinalizer(application, siteFinalizerName)
+		if err := r.Update(ctx, application); err != nil {
+			r.Log.WithValues("application", application.Name).Error(err, "failed to remove Finalizer from application")
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	application.Status = r.ApplicationConverter.ConvertFromServiceOutput(output)
+
+	if reconcileError != nil {
+		r.Log.WithValues("application", application.Name).Error(reconcileError, "failed to reconcile, trying to update last known status")
+	}
+
+	err := r.Status().Update(ctx, application)
 	if err != nil {
-		return r.handleError(err)
+		r.Log.WithValues("application", application.Name).Error(reconcileError, "failed to update application status, retrying in 5 seconds")
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
 	}
 
-	// TODO: fetch the exposed service reference in order to updates on the service (port, service deleted)
-
-	log.V(1).Info(
-		"application reconciled successfully",
-		"id", updatedApplicationOnSac.ID,
-		"name", updatedApplicationOnSac.Name,
-	)
-
-	return ctrl.Result{}, nil
-}
-
-func (r *ApplicationReconciler) updateApplicationState(
-	ctx context.Context,
-	log logr.Logger,
-	application *accessv1.Application,
-	updatedApplicationOnSac *model.Application,
-) error {
-	if updatedApplicationOnSac.ID != nil {
-		application.Status.Id = utils.FromUUID(*updatedApplicationOnSac.ID)
-
-		if err := r.Status().Update(ctx, application); err != nil {
-			log.Error(err, "unable to update Application status")
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *ApplicationReconciler) handleError(err error) (ctrl.Result, error) {
-	if err != nil && typederror.IsErrorType(typederror.UnrecoverableError, err) {
-		return ctrl.Result{Requeue: false}, err
-	}
-
-	return ctrl.Result{Requeue: true}, err
+	return ctrl.Result{RequeueAfter: 5 * time.Second}, reconcileError
 }
