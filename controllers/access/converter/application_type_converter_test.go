@@ -20,7 +20,7 @@ func TestConvertToModelWhenHTTP(t *testing.T) {
 	application := buildTestApplication(applicationName, siteID, accessPolicies)
 
 	// when
-	result := converter.ConvertToModel(application)
+	result := converter.ConvertToModel(&application)
 
 	// then
 	assert.Nil(t, result.ID)
@@ -28,9 +28,9 @@ func TestConvertToModelWhenHTTP(t *testing.T) {
 	assert.Equal(t, model.DefaultType, result.Type)
 	assert.Equal(t, model.DefaultSubType, result.SubType)
 	assert.Equal(t, "http://net-tools:8080", result.InternalAddress)
-	assert.Equal(t, siteID, result.Site)
-	assert.Equal(t, accessPolicies, result.AccessPolicies)
-	assert.Equal(t, []string{}, result.ActivityPolicies)
+	assert.Equal(t, siteID, result.SiteName)
+	assert.Equal(t, accessPolicies, result.AccessPoliciesNames)
+	assert.Equal(t, []string{}, result.ActivityPoliciesNames)
 }
 
 func TestConvertToModelWhenHTTPS(t *testing.T) {
@@ -41,7 +41,7 @@ func TestConvertToModelWhenHTTPS(t *testing.T) {
 	application.Spec.Service.Port = "443"
 
 	// when
-	result := converter.ConvertToModel(application)
+	result := converter.ConvertToModel(&application)
 
 	// then
 	assert.Nil(t, result.ID)
@@ -49,9 +49,9 @@ func TestConvertToModelWhenHTTPS(t *testing.T) {
 	assert.Equal(t, model.DefaultType, result.Type)
 	assert.Equal(t, model.DefaultSubType, result.SubType)
 	assert.Equal(t, "https://net-tools:443", result.InternalAddress)
-	assert.Equal(t, "12345", result.Site)
-	assert.Equal(t, []string{}, result.AccessPolicies)
-	assert.Equal(t, []string{}, result.ActivityPolicies)
+	assert.Equal(t, "12345", result.SiteName)
+	assert.Equal(t, []string{}, result.AccessPoliciesNames)
+	assert.Equal(t, []string{}, result.ActivityPoliciesNames)
 }
 
 func buildTestApplication(applicationName string, siteID string, accessPolicies []string) accessv1.Application {
@@ -60,16 +60,15 @@ func buildTestApplication(applicationName string, siteID string, accessPolicies 
 			Namespace: "Test-Namespace",
 		},
 		Spec: accessv1.ApplicationSpec{
-			Name:    &applicationName,
-			Type:    nil,
-			SubType: nil,
+			Type:    "",
+			SubType: "",
 			Service: accessv1.Service{
 				Name: "net-tools",
 				Port: "8080",
 			},
-			Site:             siteID,
-			AccessPolicies:   accessPolicies,
-			ActivityPolicies: []string{},
+			SiteName:              siteID,
+			AccessPoliciesNames:   accessPolicies,
+			ActivityPoliciesNames: []string{},
 		},
 		Status: accessv1.ApplicationStatus{Id: ""},
 	}

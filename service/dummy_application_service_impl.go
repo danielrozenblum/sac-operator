@@ -23,7 +23,7 @@ package service
 //
 //func (a *DummyApplicationServiceImpl) Update(ctx context.Context, updatedApplication *model.Application) (*model.Application, error) {
 //	log := logger.FromContext(ctx)
-//	log.Info("Dummy update Application")
+//	log.Info("Dummy updateSiteAndPolicies Application")
 //	return model.NewApplicationBuilder().WithID(updatedApplication.ID).Build(), nil
 //}
 //

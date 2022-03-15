@@ -5,15 +5,20 @@ import (
 )
 
 type Application struct {
-	ID               string
-	Name             string
-	Type             ApplicationType
-	SubType          ApplicationSubType
-	InternalAddress  string
-	Site             string
-	AccessPolicies   []string
-	ActivityPolicies []string
-	ToDelete         bool
+	ID                    string
+	Name                  string
+	Type                  ApplicationType
+	SubType               ApplicationSubType
+	InternalAddress       string
+	SiteName              string
+	AccessPoliciesNames   []string
+	ActivityPoliciesNames []string
+	SiteId                string
+	PoliciesIDS           []string
+	ToDelete              bool
+	IsVisible             bool
+	IsNotificationEnabled bool
+	Enabled               bool
 }
 
 func (a *Application) String() string {

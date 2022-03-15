@@ -13,14 +13,14 @@ func NewApplicationBuilder() *ApplicationBuilder {
 
 	return &ApplicationBuilder{
 		application: &Application{
-			ID:               applicationId,
-			Name:             "application-test",
-			Type:             HTTP,
-			SubType:          DefaultSubType,
-			InternalAddress:  "http://1.1.1.1",
-			Site:             "site-test-1",
-			AccessPolicies:   []string{"access-policy-1", "access-policy-2"},
-			ActivityPolicies: []string{},
+			ID:                    applicationId,
+			Name:                  "application-test",
+			Type:                  HTTP,
+			SubType:               DefaultSubType,
+			InternalAddress:       "http://1.1.1.1",
+			SiteName:              "site-test-1",
+			AccessPoliciesNames:   []string{"access-policy-1", "access-policy-2"},
+			ActivityPoliciesNames: []string{},
 		},
 	}
 }

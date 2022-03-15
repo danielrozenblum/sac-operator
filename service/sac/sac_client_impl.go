@@ -65,19 +65,14 @@ func (s *SecureAccessCloudClientImpl) UpdateApplication(applicationDTO *dto.Appl
 func (s *SecureAccessCloudClientImpl) FindApplicationByID(id string) (*dto.ApplicationDTO, error) {
 	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/applications/" + id
 
-	var applications dto.ApplicationPageDTO
-	err := s.performGetRequest(endpoint, &applications)
+	var application dto.ApplicationDTO
+	err := s.performGetRequest(endpoint, &application)
 
 	if err != nil {
 		return &dto.ApplicationDTO{}, err
 	}
 
-	if applications.NumberOfElements == 0 {
-		return &dto.ApplicationDTO{}, ErrorNotFound
-	}
-
-	// Return the first policy if more than one found
-	return &applications.Content[0], nil
+	return &application, nil
 }
 
 func (s *SecureAccessCloudClientImpl) FindApplicationByName(name string) (*dto.ApplicationDTO, error) {
@@ -171,7 +166,7 @@ func (s *SecureAccessCloudClientImpl) UpdatePolicies(applicationId string, appli
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Site API
+// SiteName API
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (s *SecureAccessCloudClientImpl) CreateSite(siteDTO *dto.SiteDTO) (*dto.SiteDTO, error) {
@@ -334,8 +329,12 @@ func (s *SecureAccessCloudClientImpl) performModifyRequest(method string, endpoi
 		return errors.New("unsupported http method: " + method)
 	}
 
+	if response.StatusCode() == http.StatusNotFound {
+		return ErrorNotFound
+	}
+
 	if !isSuccess(response.StatusCode()) {
-		return fmt.Errorf("failed with status-code: %d and body: %s", response.StatusCode(), response.String())
+		return fmt.Errorf("%w failed with status-code: %d and body: %s", response.StatusCode(), response.String())
 	}
 
 	// 4. Unmarshal response body

@@ -121,7 +121,7 @@ func main() {
 		SiteConverter:           converter.NewSiteConverter(),
 		Log:                     siteReconcilerLogger,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Site")
+		setupLog.Error(err, "unable to create controller", "controller", "SiteName")
 		os.Exit(1)
 	}
 	applicationReconcilerLogger := ctrl.Log.WithName("application-reconcile")

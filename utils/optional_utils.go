@@ -10,26 +10,26 @@ func GetValueOrDefault(value interface{}, defaultValue interface{}) interface{} 
 	return value
 }
 
-func GetStringPtrValueOrDefault(value *string, defaultValue string) string {
-	if value == nil {
+func GetStringValueOrDefault(value string, defaultValue string) string {
+	if value == "" {
 		return defaultValue
 	}
 
-	return *value
+	return value
 }
 
-func GetApplicationTypeOrDefault(value *model.ApplicationType, defaultValue model.ApplicationType) model.ApplicationType {
-	if value == nil {
+func GetApplicationTypeOrDefault(value model.ApplicationType, defaultValue model.ApplicationType) model.ApplicationType {
+	if value == "" {
 		return defaultValue
 	}
 
-	return *value
+	return value
 }
 
-func GetApplicationSubTypeOrDefault(value *model.ApplicationSubType, defaultValue model.ApplicationSubType) model.ApplicationSubType {
-	if value == nil {
+func GetApplicationSubTypeOrDefault(value model.ApplicationSubType, defaultValue model.ApplicationSubType) model.ApplicationSubType {
+	if value == "" {
 		return defaultValue
 	}
 
-	return *value
+	return value
 }

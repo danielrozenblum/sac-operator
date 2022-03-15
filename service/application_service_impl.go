@@ -39,121 +39,125 @@ func (a *ApplicationServiceImpl) Reconcile(ctx context.Context, application *mod
 		return output, nil
 	}
 
-	if application.ID == "" {
-		applicationModel, err := a.create(application)
-		output.SACApplicationID = applicationModel.ID
+	err := a.getSiteAndPoliciesIDs(application)
+	if err != nil {
 		return output, err
 	}
 
-	return nil, nil
+	if application.ID == "" {
+		err = a.create(application)
+		if err != nil {
+			return output, err
+		}
+	} else {
+		err = a.updateApplication(application)
+		if err != nil {
+			output.SACApplicationID = application.ID
+			return output, err
+		}
+	}
+
+	output.SACApplicationID = application.ID
+
+	err = a.updateSiteAndPolicies(application)
+	if err != nil {
+		return output, err
+	}
+
+	output.SiteID = application.SiteId
+	output.PoliciesIDs = application.PoliciesIDS
+
+	return output, nil
 }
 
 func NewApplicationServiceImpl(sacClient sac.SecureAccessCloudClient, logger logr.Logger) ApplicationService {
 	return &ApplicationServiceImpl{sacClient: sacClient, log: logger}
 }
 
-func (a *ApplicationServiceImpl) create(applicationToCreate *model.Application) (*model.Application, error) {
-	a.log.Info("Trying to create application: " + applicationToCreate.String())
+func (a *ApplicationServiceImpl) create(applicationToCreate *model.Application) error {
+	a.log.Info("creating application: " + applicationToCreate.String())
 
 	// 1. Find Application by Name to verify the name isn't used
 	appInSac, err := a.sacClient.FindApplicationByName(applicationToCreate.Name)
 	if err != nil && err != sac.ErrorNotFound {
-		return &model.Application{}, err
+		return err
 	}
 
 	if appInSac.ID != "" {
-		return &model.Application{}, fmt.Errorf("%w application %s already exist %s", typederror.UnrecoverableError, applicationToCreate.Name, appInSac.ID)
+		return fmt.Errorf("%w application %s already exist %s", typederror.UnrecoverableError, applicationToCreate.Name, appInSac.ID)
 	}
 
-	// 2. Validate Site Exists
-	site, err := a.sacClient.FindSiteByName(applicationToCreate.Site)
-	if err != nil {
-		if errors.Is(err, sac.ErrorNotFound) {
-			return &model.Application{}, fmt.Errorf("%w site %s does not exist", typederror.UnrecoverableError, applicationToCreate.Site)
-		}
-		return &model.Application{}, fmt.Errorf("%w could not validate site status", err)
-	}
-
-	// 3. Validate Policies Exists
-	policies, err := a.sacClient.FindPoliciesByNames(append(applicationToCreate.AccessPolicies, applicationToCreate.ActivityPolicies...))
-	if err != nil {
-		if errors.Is(err, sac.ErrorNotFound) {
-			return &model.Application{}, fmt.Errorf("%w policy does not exist %s", typederror.UnrecoverableError, err)
-		}
-		return &model.Application{}, fmt.Errorf("%w could not validate policy status", err)
-	}
-
-	// 4. createSite Application
+	// 4. create Application
 	applicationDTO := dto.FromApplicationModel(applicationToCreate)
 	createdApplicationDTO, err := a.sacClient.CreateApplication(applicationDTO)
 	if err != nil {
-		return &model.Application{}, err
+		return err
 	}
+	applicationToCreate.ID = createdApplicationDTO.ID
 
-	// 5. Convert back to model
-	result := dto.ToApplicationModel(createdApplicationDTO, site.ID)
-
-	// 6. Bind Site & Policies (Idempotent)
-	err = a.bindSiteToApplication(result, site)
-	if err != nil {
-		return &model.Application{
-			ID: createdApplicationDTO.ID,
-		}, err
-	}
-
-	err = a.bindPoliciesToApplication(result, policies)
-	if err != nil {
-		return &model.Application{
-			ID: createdApplicationDTO.ID,
-		}, err
-	}
-
-	a.log.Info("Application: '" + applicationToCreate.String() + "' created successfully.")
-	return result, nil
+	return nil
 }
 
-func (a *ApplicationServiceImpl) update(updatedApplication *model.Application) (*model.Application, error) {
-	a.log.Info("Dummy update Application")
+func (a *ApplicationServiceImpl) getSiteAndPoliciesIDs(applicationToCreate *model.Application) error {
 
-	// 1. Validate Site Exists
-	site, err := a.sacClient.FindSiteByName(updatedApplication.Site)
+	// 2. Validate SiteName Exists
+	site, err := a.sacClient.FindSiteByName(applicationToCreate.SiteName)
 	if err != nil {
-		return nil, fmt.Errorf("%w %s", typederror.UnrecoverableError, err)
+		if errors.Is(err, sac.ErrorNotFound) {
+			return fmt.Errorf("%w site %s does not exist", typederror.UnrecoverableError, applicationToCreate.SiteName)
+		}
+		return fmt.Errorf("%w could not validate site status", err)
 	}
 
-	// 2. Validate Policies Exists
-	policies, err := a.sacClient.FindPoliciesByNames(append(updatedApplication.AccessPolicies, updatedApplication.ActivityPolicies...))
+	applicationToCreate.SiteId = site.ID
+
+	// 3. Validate Policies Exists
+	policies, err := a.sacClient.FindPoliciesByNames(append(applicationToCreate.AccessPoliciesNames, applicationToCreate.ActivityPoliciesNames...))
 	if err != nil {
-		return nil, fmt.Errorf("%w %s", typederror.UnrecoverableError, err)
+		if errors.Is(err, sac.ErrorNotFound) {
+			return fmt.Errorf("%w policy does not exist %s", typederror.UnrecoverableError, err)
+		}
+		return fmt.Errorf("%w could not validate policy status", err)
 	}
 
-	// 3. update Application
-	applicationDTO, err := a.completeApplication(updatedApplication)
-	if err != nil {
-		return nil, err
+	for i := range policies {
+		applicationToCreate.PoliciesIDS = append(applicationToCreate.PoliciesIDS, policies[i].ID)
 	}
 
-	updatedApplicationDTO, err := a.sacClient.UpdateApplication(applicationDTO)
+	return nil
+}
+
+func (a *ApplicationServiceImpl) updateSiteAndPolicies(application *model.Application) error {
+
+	// 5. Bind SiteName & Policies (Idempotent)
+	err := a.bindSiteToApplication(application)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// 4. Convert back to model
-	result := dto.ToApplicationModel(updatedApplicationDTO, site.ID)
-
-	// 5. Bind Site & Policies (Idempotent)
-	err = a.bindSiteToApplication(result, site)
+	// 5. Bind SiteName & Policies (Idempotent)
+	err = a.bindPoliciesToApplication(application)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// 5. Bind Site & Policies (Idempotent)
-	err = a.bindPoliciesToApplication(result, policies)
+	return nil
+}
+
+func (a *ApplicationServiceImpl) updateApplication(application *model.Application) error {
+
+	// 3. updateSiteAndPolicies Application
+	applicationDTO := dto.FromApplicationModel(application)
+
+	_, err := a.sacClient.UpdateApplication(applicationDTO)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sac.ErrorNotFound) {
+			return fmt.Errorf("%w application id %s not found", typederror.UnrecoverableError, application.ID)
+		}
+		return err
 	}
 
-	return result, nil
+	return nil
 }
 
 func (a *ApplicationServiceImpl) completeApplication(updatedApplication *model.Application) (*dto.ApplicationDTO, error) {
@@ -186,10 +190,9 @@ func (a *ApplicationServiceImpl) delete(id string) error {
 
 func (a *ApplicationServiceImpl) bindSiteToApplication(
 	application *model.Application,
-	site *dto.SiteDTO,
 ) error {
-	// Bind to Site (Idempotent)
-	err := a.sacClient.BindApplicationToSite(application.ID, site.ID)
+	// Bind to SiteName (Idempotent)
+	err := a.sacClient.BindApplicationToSite(application.ID, application.SiteId)
 	if err != nil {
 		return err
 	}
@@ -199,15 +202,9 @@ func (a *ApplicationServiceImpl) bindSiteToApplication(
 
 func (a *ApplicationServiceImpl) bindPoliciesToApplication(
 	application *model.Application,
-	policies []dto.PolicyDTO,
 ) error {
 
-	// Attach Policies (Idempotent)
-	var policyIds []string
-	for _, policy := range policies {
-		policyIds = append(policyIds, policy.ID)
-	}
-	err := a.sacClient.UpdatePolicies(application.ID, application.Type, policyIds)
+	err := a.sacClient.UpdatePolicies(application.ID, application.Type, application.PoliciesIDS)
 	if err != nil {
 		return err
 	}

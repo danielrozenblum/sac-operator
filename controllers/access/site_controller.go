@@ -21,6 +21,10 @@ import (
 	"errors"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"bitbucket.org/accezz-io/sac-operator/utils/typederror"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
@@ -44,12 +48,13 @@ import (
 )
 
 var (
-	siteFinalizerName = "sites.access.secure-access-cloud.symantec.com/finalizer"
-	podOwnerKey       = ".metadata.controller"
-	apiGVStr          = accessv1.GroupVersion.String()
+	siteFinalizerName        = "sites.access.secure-access-cloud.symantec.com/finalizer"
+	applicationFinalizerName = "application.access.secure-access-cloud.symantec.com/finalizer"
+	podOwnerKey              = ".metadata.controller"
+	apiGVStr                 = accessv1.GroupVersion.String()
 )
 
-// SiteReconcile reconciles a Site object
+// SiteReconcile reconciles a SiteName object
 type SiteReconcile struct {
 	client.Client
 	Scheme                  *runtime.Scheme
@@ -65,7 +70,7 @@ type SiteReconcile struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the Site object against the actual cluster state, and then
+// the SiteName object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
@@ -73,24 +78,24 @@ type SiteReconcile struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *SiteReconcile) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
-	siteCRD := &accessv1.Site{}
+	site := &accessv1.Site{}
 
-	if err := r.Get(ctx, req.NamespacedName, siteCRD); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, site); err != nil {
 		r.Log.Error(err, "unable to fetch site from k8s api")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	siteModel := r.SiteConverter.ConvertToServiceModel(siteCRD)
-	serviceImpl := r.serviceFactory(siteCRD)
-	output, err := serviceImpl.Reconcile(ctx, siteModel)
-	if !controllerutil.ContainsFinalizer(siteCRD, siteFinalizerName) && output.SACSiteID != "" {
-		controllerutil.AddFinalizer(siteCRD, siteFinalizerName)
-		if err := r.Update(ctx, siteCRD); err != nil {
-			r.Log.WithValues("site", siteCRD.Name).Info("failed to add finalizer")
+	model := r.SiteConverter.ConvertToServiceModel(site)
+	serviceImpl := r.serviceFactory(site)
+	output, err := serviceImpl.Reconcile(ctx, model)
+	if !controllerutil.ContainsFinalizer(site, siteFinalizerName) && output.SACSiteID != "" {
+		controllerutil.AddFinalizer(site, siteFinalizerName)
+		if err := r.Update(ctx, site); err != nil {
+			r.Log.WithValues("site", site.Name).Info("failed to add finalizer")
 			return ctrl.Result{}, err
 		}
 	}
-	return r.handleReconcilerReturn(ctx, siteCRD, output, err)
+	return r.handleReconcilerReturn(ctx, site, output, err)
 
 }
 
@@ -103,8 +108,8 @@ func (r *SiteReconcile) SetupWithManager(mgr ctrl.Manager) error {
 		if owner == nil {
 			return nil
 		}
-		// ...make sure it's a Site...
-		if owner.APIVersion != apiGVStr || owner.Kind != "Site" {
+		// ...make sure it's a SiteName...
+		if owner.APIVersion != apiGVStr || owner.Kind != "SiteName" {
 			return nil
 		}
 
@@ -117,6 +122,7 @@ func (r *SiteReconcile) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&accessv1.Site{}).
 		Owns(&corev1.Pod{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
 
@@ -131,7 +137,7 @@ func (r *SiteReconcile) serviceFactory(site *accessv1.Site) *service.SiteService
 
 func (r *SiteReconcile) handleReconcilerReturn(ctx context.Context, siteCRD *accessv1.Site, output *service.SiteReconcileOutput, reconcileError error) (ctrl.Result, error) {
 
-	if errors.As(reconcileError, &service.UnrecoverableError) {
+	if errors.As(reconcileError, &typederror.UnrecoverableError) {
 		r.Log.WithValues("site", siteCRD.Name).Error(reconcileError, "got unrecoverable error, giving up...")
 		return ctrl.Result{}, nil
 	}

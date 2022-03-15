@@ -6,6 +6,6 @@ spec:
   service:
     name: auth-service
     port: "8080"
-  site: operator-site-1
+  site: operator-site-2
   type: HTTP
   accessPolicies: [ rnd-policy, product-policy ]

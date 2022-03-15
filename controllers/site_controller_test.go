@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	accessv1 "bitbucket.org/accezz-io/sac-operator/apis/access/v1"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -30,7 +30,7 @@ func getSiteSpec(numberOfConnectors int, connectorNamespace string) accessv1.Sit
 	}
 }
 
-var _ = Describe("Site controller", func() {
+var _ = Describe("SiteName controller", func() {
 
 	const (
 		SiteNamePrefix            = "test-operator-site"
@@ -43,7 +43,7 @@ var _ = Describe("Site controller", func() {
 		interval = time.Second * 1
 	)
 
-	Context("When creating new site", func() {
+	PContext("When creating new site", func() {
 		site := &accessv1.Site{}
 		siteDto := &dto.SiteDTO{}
 		BeforeEach(func() {

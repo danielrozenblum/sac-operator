@@ -12,8 +12,8 @@ type ApplicationService interface {
 }
 
 type ApplicationReconcileOutput struct {
-	Deleted           bool
-	SACApplicationID  string
-	SiteID            string
-	AccessPoliciesIDs []string
+	Deleted          bool
+	SACApplicationID string
+	SiteID           string
+	PoliciesIDs      []string
 }

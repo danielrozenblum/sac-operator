@@ -146,7 +146,7 @@ func TestCreateApplication(t *testing.T) {
 		ConnectionSettings: dto.ConnectionSettingsDTO{
 			InternalAddress: "https://httpbin.org/",
 		},
-		Icon:                  nil,
+		Icon:                  "",
 		IsVisible:             false,
 		IsNotificationEnabled: false,
 		Enabled:               false,

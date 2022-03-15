@@ -11,6 +11,7 @@ type SiteDTO struct {
 	Name             string             `json:"name,omitempty"`
 	ConnectorObjects []ConnectorObjects `json:"connector_objects,omitempty"`
 	Connectors       []string           `json:"connectors,omitempty"`
+	ApplicationIDs   []string           `json:"application_ids"`
 }
 
 type SitePageDTO struct {

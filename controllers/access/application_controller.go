@@ -19,20 +19,23 @@ package access
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"bitbucket.org/accezz-io/sac-operator/utils/typederror"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
 
+	accessv1 "bitbucket.org/accezz-io/sac-operator/apis/access/v1"
 	"bitbucket.org/accezz-io/sac-operator/controllers/access/converter"
 	"bitbucket.org/accezz-io/sac-operator/service"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logger "sigs.k8s.io/controller-runtime/pkg/log"
-
-	accessv1 "bitbucket.org/accezz-io/sac-operator/apis/access/v1"
 )
 
 // ApplicationReconciler reconciles a Application object
@@ -48,6 +51,7 @@ type ApplicationReconciler struct {
 func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&accessv1.Application{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
 
@@ -68,30 +72,44 @@ func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := logger.FromContext(ctx).WithValues("sac-application spec", req.NamespacedName)
 
 	application := &accessv1.Application{}
 	//var updatedApplicationOnSac *model.Application
 
+	r.Log.Info(fmt.Sprintf("got reconcile request for %+v", req.NamespacedName))
+
 	if err := r.Get(ctx, req.NamespacedName, application); err != nil {
-		log.Error(err, "unable to fetch application")
+		r.Log.Error(err, "unable to fetch application")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	applicationModel := r.ApplicationConverter.ConvertToModel(application)
-	reconcileOutput, err := r.ApplicationService.Reconcile(ctx, applicationModel)
-	return r.handleReconcilerReturn(ctx, application, reconcileOutput, err)
+	if err := r.ApplicationConverter.Validate(application); err != nil {
+		r.Log.Error(err, "validation error")
+		return ctrl.Result{}, nil
+	}
+
+	model := r.ApplicationConverter.ConvertToModel(application)
+	output, err := r.ApplicationService.Reconcile(ctx, model)
+	if !controllerutil.ContainsFinalizer(application, applicationFinalizerName) && output.SACApplicationID != "" {
+		controllerutil.AddFinalizer(application, applicationFinalizerName)
+		if err := r.Update(ctx, application); err != nil {
+			r.Log.WithValues("application", application.Name).Info("failed to add finalizer")
+			return ctrl.Result{}, err
+		}
+	}
+	return r.handleReconcilerReturn(ctx, application, output, err)
 
 }
 
 func (r *ApplicationReconciler) handleReconcilerReturn(ctx context.Context, application *accessv1.Application, output *service.ApplicationReconcileOutput, reconcileError error) (ctrl.Result, error) {
-	if errors.Is(reconcileError, service.UnrecoverableError) {
+
+	if errors.Is(reconcileError, typederror.UnrecoverableError) {
 		r.Log.WithValues("application", application.Name).Error(reconcileError, "got unrecoverable error, giving up...")
 		return ctrl.Result{Requeue: false}, nil
 	}
 
 	if output.Deleted {
-		controllerutil.RemoveFinalizer(application, siteFinalizerName)
+		controllerutil.RemoveFinalizer(application, applicationFinalizerName)
 		if err := r.Update(ctx, application); err != nil {
 			r.Log.WithValues("application", application.Name).Error(err, "failed to remove Finalizer from application")
 			return ctrl.Result{}, err
@@ -111,5 +129,9 @@ func (r *ApplicationReconciler) handleReconcilerReturn(ctx context.Context, appl
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
 	}
 
-	return ctrl.Result{RequeueAfter: 5 * time.Second}, reconcileError
+	if reconcileError != nil {
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, reconcileError
+	}
+
+	return ctrl.Result{Requeue: false}, nil
 }

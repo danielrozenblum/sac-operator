@@ -18,7 +18,7 @@ func NewApplicationDTOBuilder() *ApplicationDTOBuilder {
 		Type:                  model.DefaultType,
 		SubType:               model.DefaultSubType,
 		ConnectionSettings:    ConnectionSettingsDTO{},
-		Icon:                  nil,
+		Icon:                  "",
 		IsVisible:             true,
 		IsNotificationEnabled: true,
 		Enabled:               true,
@@ -37,6 +37,16 @@ func (a *ApplicationDTOBuilder) WithName(name string) *ApplicationDTOBuilder {
 
 func (a *ApplicationDTOBuilder) WithIsVisible(isVisible bool) *ApplicationDTOBuilder {
 	a.dto.IsVisible = isVisible
+	return a
+}
+
+func (a *ApplicationDTOBuilder) WithIsNotificationEnabled(isNotificationEnabled bool) *ApplicationDTOBuilder {
+	a.dto.IsNotificationEnabled = isNotificationEnabled
+	return a
+}
+
+func (a *ApplicationDTOBuilder) WithEnabled(enabled bool) *ApplicationDTOBuilder {
+	a.dto.Enabled = enabled
 	return a
 }
 

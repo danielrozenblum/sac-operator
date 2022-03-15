@@ -10,10 +10,10 @@ type ApplicationDTO struct {
 	Type                  model.ApplicationType    `json:"type,omitempty"`
 	SubType               model.ApplicationSubType `json:"subType,omitempty"`
 	ConnectionSettings    ConnectionSettingsDTO    `json:"connectionSettings,omitempty"`
-	Icon                  *string                  `json:"icon,omitempty"`
-	IsVisible             bool                     `json:"isVisible,omitempty"`
-	IsNotificationEnabled bool                     `json:"isNotificationEnabled,omitempty"`
-	Enabled               bool                     `json:"enabled,omitempty"`
+	Icon                  string                   `json:"icon,omitempty"`
+	IsVisible             bool                     `json:"isVisible"`
+	IsNotificationEnabled bool                     `json:"isNotificationEnabled"`
+	Enabled               bool                     `json:"enabled"`
 }
 
 type ConnectionSettingsDTO struct {
@@ -41,21 +41,24 @@ func FromApplicationModel(application *model.Application) *ApplicationDTO {
 		ConnectionSettings: ConnectionSettingsDTO{
 			InternalAddress: application.InternalAddress,
 		},
+		IsVisible:             application.IsVisible,
+		IsNotificationEnabled: application.IsNotificationEnabled,
+		Enabled:               application.Enabled,
 	}
 }
 
-func ToApplicationModel(dto *ApplicationDTO, siteID string) *model.Application {
+/*func ToApplicationModel(dto *ApplicationDTO) *model.Application {
 	return &model.Application{
 		ID:               dto.ID,
 		Name:             dto.Name,
 		Type:             dto.Type,
 		SubType:          dto.SubType,
 		InternalAddress:  dto.ConnectionSettings.InternalAddress,
-		Site:             siteID,
-		AccessPolicies:   nil,
-		ActivityPolicies: nil,
+		SiteName:         siteID,
+		AccessPoliciesNames:   nil,
+		ActivityPoliciesNames: nil,
 	}
-}
+}*/
 
 func MergeApplication(existingApplication *ApplicationDTO, updatedApplication *ApplicationDTO) *ApplicationDTO {
 	mergedApplication := *existingApplication
@@ -64,6 +67,7 @@ func MergeApplication(existingApplication *ApplicationDTO, updatedApplication *A
 	mergedApplication.Type = updatedApplication.Type
 	mergedApplication.SubType = updatedApplication.SubType
 	mergedApplication.ConnectionSettings.InternalAddress = updatedApplication.ConnectionSettings.InternalAddress
+	mergedApplication.Icon = updatedApplication.Icon
 
 	return &mergedApplication
 }

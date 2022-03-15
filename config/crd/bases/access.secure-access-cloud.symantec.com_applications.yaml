@@ -47,6 +47,12 @@ spec:
                 items:
                   type: string
                 type: array
+              enabled:
+                type: boolean
+              is_notification_enabled:
+                type: boolean
+              is_visible:
+                type: boolean
               name:
                 description: Name of the application (default is service name)
                 type: string
