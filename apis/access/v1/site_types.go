@@ -28,11 +28,11 @@ type SiteSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Name is an example field of Site. Edit site_types.go to remove/update
-	TenantIdentifier    string `json:"tenant_identifier"`
-	NumberOfConnectors  int    `json:"number_of_connectors"`
-	ConnectorsNamespace string `json:"connectors_namespace"`
-	EndpointURL         string `json:"endpoint_url"`
+	// number_of_connectors to create for this site
+	NumberOfConnectors int `json:"number_of_connectors"`
+	// dockerhub image pull secret default is none
+	// +optional
+	ImagePullSecret string `json:"image_pull_secret"`
 }
 
 // SiteStatus defines the observed state of Site

@@ -23,10 +23,7 @@ import (
 
 func getSiteSpec(numberOfConnectors int, connectorNamespace string) accessv1.SiteSpec {
 	return accessv1.SiteSpec{
-		TenantIdentifier:    "1667d9c1d754419a9c456f47b9c1df28_symchatbotdemo",
-		NumberOfConnectors:  numberOfConnectors,
-		ConnectorsNamespace: connectorNamespace,
-		EndpointURL:         "symchatbotdemo.luminatesite.com",
+		NumberOfConnectors: numberOfConnectors,
 	}
 }
 
@@ -83,7 +80,6 @@ var _ = Describe("SiteName controller", func() {
 				}
 				return true
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdSite.Spec.ConnectorsNamespace).Should(Equal(site.Spec.ConnectorsNamespace))
 			Expect(createdSite.Spec.NumberOfConnectors).Should(Equal(site.Spec.NumberOfConnectors))
 			fmt.Fprintf(GinkgoWriter, "site spec seems to be ok %+v\n", createdSite.Spec)
 			Eventually(func() bool {

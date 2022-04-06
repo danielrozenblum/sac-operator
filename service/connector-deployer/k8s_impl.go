@@ -23,17 +23,37 @@ import (
 
 const AnnotationPrefix = "access.secure-access-cloud.symantec.com"
 
+type connectorConfiguration struct {
+	imagePullSecret string
+}
+
 type KubernetesImpl struct {
 	client.Client
-	Scheme              *runtime.Scheme
-	SiteNamespace       string
-	ConnectorsNamespace string
-	podOwnerKey         string
-	log                 logr.Logger
+	Scheme                 *runtime.Scheme
+	siteNamespace          string
+	podOwnerKey            string
+	connectorConfiguration *connectorConfiguration
+	log                    logr.Logger
 }
 
 func NewKubernetesImpl(client client.Client, scheme *runtime.Scheme, podOwnerKey string, log logr.Logger) *KubernetesImpl {
-	return &KubernetesImpl{Client: client, Scheme: scheme, podOwnerKey: podOwnerKey, log: log}
+	return &KubernetesImpl{Client: client, Scheme: scheme, podOwnerKey: podOwnerKey, log: log,
+		connectorConfiguration: &connectorConfiguration{},
+	}
+}
+
+func (k *KubernetesImpl) SetConnectorImagePullSecret(imagePullSecret string) *KubernetesImpl {
+
+	k.connectorConfiguration.imagePullSecret = imagePullSecret
+
+	return k
+}
+
+func (k *KubernetesImpl) SetSiteNamespace(namespace string) *KubernetesImpl {
+
+	k.siteNamespace = namespace
+
+	return k
 }
 
 func (k *KubernetesImpl) CreateConnector(ctx context.Context, inputs *CreateConnectorInput) (string, error) {
@@ -79,7 +99,7 @@ func (k *KubernetesImpl) DeleteConnector(ctx context.Context, name string) error
 	podToDelete := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: k.ConnectorsNamespace,
+			Namespace: k.siteNamespace,
 			Name:      name,
 		},
 		Spec:   corev1.PodSpec{},
@@ -93,7 +113,7 @@ func (k *KubernetesImpl) DeleteConnector(ctx context.Context, name string) error
 			return fmt.Errorf("failed to valied connector deletion from cluster")
 		}
 		time.Sleep(time.Second * 10)
-		err = k.Get(ctx, client.ObjectKey{Namespace: k.ConnectorsNamespace, Name: name}, podToDelete)
+		err = k.Get(ctx, client.ObjectKey{Namespace: k.siteNamespace, Name: name}, podToDelete)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
@@ -116,8 +136,8 @@ func (k *KubernetesImpl) GetConnectorsForSite(ctx context.Context, siteName stri
 	}
 
 	connectorList := &corev1.PodList{}
-	if err := k.List(ctx, connectorList, client.InNamespace(site.Spec.ConnectorsNamespace),
-		client.MatchingFields{k.podOwnerKey: site.Name}); err != nil {
+	if err := k.List(ctx, connectorList,
+		client.InNamespace(k.siteNamespace), client.MatchingFields{k.podOwnerKey: site.Name}); err != nil {
 		return []Connector{}, err
 	}
 
@@ -153,6 +173,7 @@ func (k *KubernetesImpl) GetConnectorsForSite(ctx context.Context, siteName stri
 func (k *KubernetesImpl) getConnectorPodForSite(inputs *CreateConnectorInput, site *accessv1.Site) *corev1.Pod {
 
 	podEnvVar := []corev1.EnvVar{}
+	connectorNamespace := site.Namespace // as site is the owner of the connector, it must(?) reside in the same namespace
 
 	for key, val := range inputs.EnvironmentVars {
 		podEnvVar = append(podEnvVar, corev1.EnvVar{
@@ -161,24 +182,25 @@ func (k *KubernetesImpl) getConnectorPodForSite(inputs *CreateConnectorInput, si
 		})
 	}
 
-	podName := inputs.Name
+	connectorContainer := corev1.Container{
+		Name:  "connector",
+		Image: inputs.Image,
+		Env:   podEnvVar,
+	}
+
 	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    make(map[string]string),
-			Namespace: k.ConnectorsNamespace,
-			Name:      podName,
+			Namespace: connectorNamespace,
+			Name:      inputs.Name,
 			Annotations: map[string]string{
 				fmt.Sprintf("%s/%s", AnnotationPrefix, "connector"): inputs.ConnectorID,
 				fmt.Sprintf("%s/%s", AnnotationPrefix, "site"):      inputs.SiteName,
 			},
 		},
 		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{
-				Name:  "connector",
-				Image: inputs.Image,
-				Env:   podEnvVar,
-			}},
+			Containers: []corev1.Container{connectorContainer},
 			SecurityContext: &corev1.PodSecurityContext{
 				RunAsUser:  utils.FromInt64(1000),
 				RunAsGroup: utils.FromInt64(1000),
@@ -186,7 +208,16 @@ func (k *KubernetesImpl) getConnectorPodForSite(inputs *CreateConnectorInput, si
 		},
 	}
 
-	_ = ctrl.SetControllerReference(site, pod, k.Scheme)
+	if k.connectorConfiguration.imagePullSecret != "" {
+		pod.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{
+			Name: k.connectorConfiguration.imagePullSecret,
+		}}
+	}
+
+	err := ctrl.SetControllerReference(site, pod, k.Scheme)
+	if err != nil {
+		k.log.Error(err, "error when setting ControllerReference")
+	}
 
 	return pod
 
@@ -195,7 +226,7 @@ func (k *KubernetesImpl) getConnectorPodForSite(inputs *CreateConnectorInput, si
 func (k *KubernetesImpl) getSite(ctx context.Context, siteName string) (*accessv1.Site, error) {
 	site := &accessv1.Site{}
 	if err := k.Get(ctx, client.ObjectKey{
-		Namespace: k.SiteNamespace,
+		Namespace: k.siteNamespace,
 		Name:      siteName,
 	}, site); err != nil {
 		return nil, err

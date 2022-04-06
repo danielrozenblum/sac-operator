@@ -15,15 +15,18 @@ func NewSiteConverter() *SiteConverter {
 
 func (s *SiteConverter) ConvertToServiceModel(site *accessv1.Site) *model.Site {
 
+	connectorConfiguration := &model.ConnectorConfiguration{}
+	if site.Spec.ImagePullSecret != "" {
+		connectorConfiguration.ImagePullSecrets = site.Spec.ImagePullSecret
+	}
+
 	siteModel := &model.Site{
-		Name:                site.Name,
-		SiteNamespace:       site.Namespace,
-		SACSiteID:           site.Status.ID,
-		TenantIdentifier:    site.Spec.TenantIdentifier,
-		NumberOfConnectors:  site.Spec.NumberOfConnectors,
-		ConnectorsNamespace: site.Spec.ConnectorsNamespace,
-		EndpointURL:         site.Spec.EndpointURL,
-		ToDelete:            !site.ObjectMeta.DeletionTimestamp.IsZero(),
+		Name:                   site.Name,
+		SiteNamespace:          site.Namespace,
+		SACSiteID:              site.Status.ID,
+		NumberOfConnectors:     site.Spec.NumberOfConnectors,
+		ToDelete:               !site.ObjectMeta.DeletionTimestamp.IsZero(),
+		ConnectorConfiguration: connectorConfiguration,
 	}
 
 	return siteModel

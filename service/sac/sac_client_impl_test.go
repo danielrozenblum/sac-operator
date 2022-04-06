@@ -118,7 +118,7 @@ func TestCreateSite(t *testing.T) {
 
 	// when
 	connector := &dto.ConnectorObjects{}
-	connector, err = sacClientTest.client.CreateConnector(site, "test")
+	connector, err = sacClientTest.client.CreateConnector(site, fmt.Sprintf("connector-%s", rand.String(4)))
 	// then
 	assert.NoError(t, err)
 	assert.NotEmpty(t, connector)
@@ -194,5 +194,24 @@ func TestBindApplicationToSite(t *testing.T) {
 	err = sacClientTest.client.BindApplicationToSite(application.ID, site.ID)
 	assert.NoError(t, err)
 	// then
+
+}
+
+func TestSecureAccessCloudClientImpl_GetConnectorDeploymentCommand(t *testing.T) {
+	tearDown := sacClientTest.setup(t)
+	defer tearDown(t)
+
+	site := &dto.SiteDTO{
+		ID:   "4a4b2b2b-0f87-479a-af05-5aa6d5580570",
+		Name: "integration-test-site",
+	}
+	connectorName := fmt.Sprintf("test-%s", rand.String(4))
+	connector, err := sacClientTest.client.CreateConnector(site, connectorName)
+	assert.Nil(t, err)
+
+	command, err := sacClientTest.client.GetConnectorDeploymentCommand(connector.ID)
+	assert.Nil(t, err)
+
+	assert.NotEmpty(t, command)
 
 }

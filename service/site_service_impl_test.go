@@ -171,3 +171,15 @@ func TestSiteServiceImpl_Reconcile(t *testing.T) {
 		})
 	}
 }
+
+func TestSiteServiceImpl_connectorDeploymentArgsFromCommand(t *testing.T) {
+	service := NewSiteServiceImpl(nil, nil, nil)
+
+	command := &dto.ConnectorDeploymentCommand{DeploymentCommands: "test-ps8l:\n    image: luminate/connector:2.10.1\n    container_name: test-ps8l\n    restart: on-failure\n    ulimits:\n        nofile: 2048\n    log_opt:\n        max-size: \"50m\"\n        max-file: \"10\"\n    environment:\n     - ENDPOINT_URL=symchatbotdemo.luminatesite.com\n     - TENANT_IDENTIFIER=1667d9c1d754419a9c456f47b9c1df28_symchatbotdemo\n     - HTTPS_SKIP_CERT_VERIFY=true\n     - OTP=7b86d374-23c4-4b32-a156-f80ec5909f5b\n     "}
+
+	args, err := service.connectorDeploymentArgsFromCommand(command)
+	assert.Nil(t, err)
+	assert.Equal(t, "luminate/connector:2.10.1", args.Image)
+	assert.Equal(t, "test-ps8l", args.ContainerName)
+	assert.Equal(t, args.EnvironmentVars["ENDPOINT_URL"], "symchatbotdemo.luminatesite.com")
+}

@@ -11,7 +11,7 @@ type SiteDTO struct {
 	Name             string             `json:"name,omitempty"`
 	ConnectorObjects []ConnectorObjects `json:"connector_objects,omitempty"`
 	Connectors       []string           `json:"connectors,omitempty"`
-	ApplicationIDs   []string           `json:"application_ids"`
+	ApplicationIDs   []string           `json:"application_ids,omitempty"`
 }
 
 type SitePageDTO struct {
@@ -62,4 +62,8 @@ type ConnectorPageDTO struct {
 	PageSize         int                `json:"size"`
 	TotalElements    int                `json:"totalElements"`
 	TotalPages       int                `json:"totalPages"`
+}
+
+type ConnectorDeploymentCommand struct {
+	DeploymentCommands string `json:"deployment_commands"`
 }

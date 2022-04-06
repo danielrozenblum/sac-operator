@@ -8,6 +8,34 @@ the need to expose the service through load-balancer and implement all security 
 
 This operator based on Kubebuilder https://book.kubebuilder.io/introduction.html.
 
+## Installing
+
+1. create api client in SAC and assign and make sure it has admin permission
+2. create generic secret that the operator will use for accessing SAC 
+
+```shell
+>> kubectl create --save-config namespace secure-access-cloud-system
+>> kubectl -n secure-access-cloud-system create secret generic secure-access-cloud-config \
+--from-literal="tenantDomain=<api endpoint>" \
+--from-literal="clientId=<client Id>" \
+--from-literal="clientSecret=<client secret>"
+```
+
+2. run the following commands:
+```shell
+>> make install
+>> make deploy
+```
+
+## Uninstall
+
+1. delete all resources related to the operator.
+```shell
+>> make undeploy
+```
+
+
+
 ## Building
 This repository using *go modules* for dependency management and using go 1.17.
 

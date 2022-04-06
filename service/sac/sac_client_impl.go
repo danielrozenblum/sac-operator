@@ -221,7 +221,7 @@ func (s *SecureAccessCloudClientImpl) CreateConnector(siteDTO *dto.SiteDTO, conn
 
 	connector := &dto.ConnectorObjects{
 		Name:           connectorName,
-		DeploymentType: "linux",
+		DeploymentType: "docker-compose",
 	}
 
 	err := s.performPostRequest(endpoint, connector, connector)
@@ -244,6 +244,21 @@ func (s *SecureAccessCloudClientImpl) DeleteConnector(id string) error {
 	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/connectors/" + id
 
 	return s.performDeleteRequest(endpoint)
+}
+
+func (s *SecureAccessCloudClientImpl) GetConnectorDeploymentCommand(id string) (*dto.ConnectorDeploymentCommand, error) {
+	endpoint := s.Setting.BuildAPIPrefixURL() + "/v2/connectors/" + id + "/command"
+
+	connectorDeploymentCommand := &dto.ConnectorDeploymentCommand{}
+
+	if err := s.performGetRequest(endpoint, &connectorDeploymentCommand); err != nil {
+		return nil, err
+	}
+	return connectorDeploymentCommand, nil
+}
+
+func (s *SecureAccessCloudClientImpl) GetTenantDomain() string {
+	return s.Setting.TenantDomain
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -334,7 +349,7 @@ func (s *SecureAccessCloudClientImpl) performModifyRequest(method string, endpoi
 	}
 
 	if !isSuccess(response.StatusCode()) {
-		return fmt.Errorf("%w failed with status-code: %d and body: %s", response.StatusCode(), response.String())
+		return fmt.Errorf("failed with status-code: %d and body: %s", response.StatusCode(), response.String())
 	}
 
 	// 4. Unmarshal response body

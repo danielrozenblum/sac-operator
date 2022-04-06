@@ -8,13 +8,13 @@ import (
 	"bitbucket.org/accezz-io/sac-operator/model"
 )
 
-type Connectors struct {
+type Connector struct {
 	CreatedTimestamp time.Time
 	DeploymentName   string
 	SacID            string
 }
 
-func sortConnectorsByOldestFirst(c []Connectors) {
+func sortConnectorsByOldestFirst(c []Connector) {
 
 	sort.Slice(c, func(i, j int) bool {
 		return c[i].CreatedTimestamp.Before(c[j].CreatedTimestamp)
@@ -25,8 +25,8 @@ func sortConnectorsByOldestFirst(c []Connectors) {
 type SiteReconcileOutput struct {
 	Deleted             bool
 	SACSiteID           string
-	HealthyConnectors   []Connectors
-	UnHealthyConnectors []Connectors
+	HealthyConnectors   []Connector
+	UnHealthyConnectors []Connector
 }
 
 type SiteService interface {

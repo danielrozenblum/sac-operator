@@ -11,12 +11,12 @@ func Test_sortConnectorsBtCreatedTimestamp(t *testing.T) {
 	baseTime := time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)
 	tests := []struct {
 		name         string
-		inConnector  []Connectors
-		outConnector []Connectors
+		inConnector  []Connector
+		outConnector []Connector
 	}{
 		{
 			name: "",
-			inConnector: []Connectors{
+			inConnector: []Connector{
 				{
 					CreatedTimestamp: baseTime.Add(3 * time.Second),
 					DeploymentName:   "third",
@@ -38,7 +38,7 @@ func Test_sortConnectorsBtCreatedTimestamp(t *testing.T) {
 					SacID:            "uuid",
 				},
 			},
-			outConnector: []Connectors{
+			outConnector: []Connector{
 				{
 					CreatedTimestamp: baseTime,
 					DeploymentName:   "baseTime",

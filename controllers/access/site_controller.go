@@ -21,6 +21,8 @@ import (
 	"errors"
 	"time"
 
+	"bitbucket.org/accezz-io/sac-operator/model"
+
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"bitbucket.org/accezz-io/sac-operator/utils/typederror"
@@ -66,6 +68,8 @@ type SiteReconcile struct {
 //+kubebuilder:rbac:groups=access.secure-access-cloud.symantec.com,resources=sites,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=access.secure-access-cloud.symantec.com,resources=sites/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=access.secure-access-cloud.symantec.com,resources=sites/finalizers,verbs=update
+//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=pods/status,verbs=get
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -86,7 +90,7 @@ func (r *SiteReconcile) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	model := r.SiteConverter.ConvertToServiceModel(site)
-	serviceImpl := r.serviceFactory(site)
+	serviceImpl := r.serviceFactory(model)
 	output, err := serviceImpl.Reconcile(ctx, model)
 	if !controllerutil.ContainsFinalizer(site, siteFinalizerName) && output.SACSiteID != "" {
 		controllerutil.AddFinalizer(site, siteFinalizerName)
@@ -108,8 +112,8 @@ func (r *SiteReconcile) SetupWithManager(mgr ctrl.Manager) error {
 		if owner == nil {
 			return nil
 		}
-		// ...make sure it's a SiteName...
-		if owner.APIVersion != apiGVStr || owner.Kind != "SiteName" {
+		// ...make sure it's a Site...
+		if owner.APIVersion != apiGVStr || owner.Kind != "Site" {
 			return nil
 		}
 
@@ -126,18 +130,19 @@ func (r *SiteReconcile) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *SiteReconcile) serviceFactory(site *accessv1.Site) *service.SiteServiceImpl {
+func (r *SiteReconcile) serviceFactory(site *model.Site) *service.SiteServiceImpl {
 	log := r.Log.WithValues("site", site.Name)
 	sacClient := r.SecureAccessCloudClient
-	k8sClients := connector_deployer.NewKubernetesImpl(r.Client, r.Scheme, podOwnerKey, log)
-	k8sClients.ConnectorsNamespace = site.Spec.ConnectorsNamespace
-	k8sClients.SiteNamespace = site.Namespace
+	k8sClients := connector_deployer.NewKubernetesImpl(r.Client, r.Scheme, podOwnerKey, log).
+		SetConnectorImagePullSecret(site.ConnectorConfiguration.ImagePullSecrets).
+		SetSiteNamespace(site.SiteNamespace)
+
 	return service.NewSiteServiceImpl(sacClient, k8sClients, log)
 }
 
 func (r *SiteReconcile) handleReconcilerReturn(ctx context.Context, siteCRD *accessv1.Site, output *service.SiteReconcileOutput, reconcileError error) (ctrl.Result, error) {
 
-	if errors.As(reconcileError, &typederror.UnrecoverableError) {
+	if errors.Is(reconcileError, typederror.UnrecoverableError) {
 		r.Log.WithValues("site", siteCRD.Name).Error(reconcileError, "got unrecoverable error, giving up...")
 		return ctrl.Result{}, nil
 	}
@@ -162,6 +167,10 @@ func (r *SiteReconcile) handleReconcilerReturn(ctx context.Context, siteCRD *acc
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
 	}
 
-	return ctrl.Result{RequeueAfter: 5 * time.Second}, reconcileError
+	if reconcileError != nil {
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, reconcileError
+	}
+
+	return ctrl.Result{Requeue: false}, nil
 
 }

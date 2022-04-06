@@ -1,3 +1,21 @@
+#---
+#apiVersion: v1
+#kind: ConfigMap
+#metadata:
+#  name: controller-manager
+#  namespace: system
+#data:
+#  SAC_TENANT_DOMAIN: ""
+#  SAC_CLIENT_ID: ""
+#---
+#apiVersion: v1
+#kind: Secret
+#metadata:
+#  name: controller-manager
+#  namespace: system
+#data:
+#  SAC_CLIENT_SECRET: ""
+---
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -31,6 +49,23 @@ spec:
         - --leader-elect
         image: controller:latest
         name: manager
+        env:
+          - name: SAC_TENANT_DOMAIN
+            valueFrom:
+              secretKeyRef:
+                key: tenantDomain
+                name: secure-access-cloud-config
+          - name: SAC_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                key: clientId
+                name: secure-access-cloud-config
+          - name: SAC_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: clientSecret
+                name: secure-access-cloud-config
+                # kubectl -n secure-access-cloud-system create secret generic secure-access-cloud-config --from-literal="tenantDomain=TENANT_DOMAIN" --from-literal="clientId=CLIENT_ID" --from-literal="clientSecret=CLIENT_SECRET"
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:

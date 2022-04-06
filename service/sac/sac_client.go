@@ -25,4 +25,5 @@ type SecureAccessCloudClient interface {
 	CreateConnector(siteDTO *dto.SiteDTO, connectorName string) (*dto.ConnectorObjects, error)
 	ListConnectorsBySite(siteName string) ([]string, error)
 	DeleteConnector(connectorID string) error
+	GetConnectorDeploymentCommand(connectorID string) (*dto.ConnectorDeploymentCommand, error)
 }

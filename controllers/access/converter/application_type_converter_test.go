@@ -23,11 +23,11 @@ func TestConvertToModelWhenHTTP(t *testing.T) {
 	result := converter.ConvertToModel(&application)
 
 	// then
-	assert.Nil(t, result.ID)
+	assert.Empty(t, result.ID)
 	assert.Equal(t, applicationName, result.Name)
 	assert.Equal(t, model.DefaultType, result.Type)
 	assert.Equal(t, model.DefaultSubType, result.SubType)
-	assert.Equal(t, "http://net-tools:8080", result.InternalAddress)
+	assert.Equal(t, "http://net-tools.default:8080", result.InternalAddress)
 	assert.Equal(t, siteID, result.SiteName)
 	assert.Equal(t, accessPolicies, result.AccessPoliciesNames)
 	assert.Equal(t, []string{}, result.ActivityPoliciesNames)
@@ -44,11 +44,11 @@ func TestConvertToModelWhenHTTPS(t *testing.T) {
 	result := converter.ConvertToModel(&application)
 
 	// then
-	assert.Nil(t, result.ID)
+	assert.Empty(t, result.ID)
 	assert.Equal(t, "test-application", result.Name)
 	assert.Equal(t, model.DefaultType, result.Type)
 	assert.Equal(t, model.DefaultSubType, result.SubType)
-	assert.Equal(t, "https://net-tools:443", result.InternalAddress)
+	assert.Equal(t, "https://net-tools.default:443", result.InternalAddress)
 	assert.Equal(t, "12345", result.SiteName)
 	assert.Equal(t, []string{}, result.AccessPoliciesNames)
 	assert.Equal(t, []string{}, result.ActivityPoliciesNames)
@@ -58,13 +58,15 @@ func buildTestApplication(applicationName string, siteID string, accessPolicies 
 	return accessv1.Application{
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: "Test-Namespace",
+			Name:      applicationName,
 		},
 		Spec: accessv1.ApplicationSpec{
 			Type:    "",
 			SubType: "",
 			Service: accessv1.Service{
-				Name: "net-tools",
-				Port: "8080",
+				Name:      "net-tools",
+				Port:      "8080",
+				Namespace: "default",
 			},
 			SiteName:              siteID,
 			AccessPoliciesNames:   accessPolicies,

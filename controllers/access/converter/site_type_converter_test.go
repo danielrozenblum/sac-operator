@@ -26,12 +26,12 @@ func TestSiteConverter_ConvertFromServiceModel(t *testing.T) {
 				site: &service.SiteReconcileOutput{
 					Deleted:   false,
 					SACSiteID: "51f33785-434d-41cf-8eae-7c07f43afbe1",
-					HealthyConnectors: []service.Connectors{{
+					HealthyConnectors: []service.Connector{{
 						CreatedTimestamp: time.Time{},
 						DeploymentName:   "dep1",
 						SacID:            "uuid1",
 					}},
-					UnHealthyConnectors: []service.Connectors{{
+					UnHealthyConnectors: []service.Connector{{
 						CreatedTimestamp: time.Time{},
 						DeploymentName:   "dep2",
 						SacID:            "uuid2",

@@ -36,21 +36,14 @@ spec:
           spec:
             description: SiteSpec defines the desired state of Site
             properties:
-              connectors_namespace:
-                type: string
-              endpoint_url:
+              image_pull_secret:
+                description: dockerhub image pull secret default is none
                 type: string
               number_of_connectors:
+                description: number_of_connectors to create for this site
                 type: integer
-              tenant_identifier:
-                description: Name is an example field of Site. Edit site_types.go
-                  to remove/update
-                type: string
             required:
-            - connectors_namespace
-            - endpoint_url
             - number_of_connectors
-            - tenant_identifier
             type: object
           status:
             description: SiteStatus defines the observed state of Site

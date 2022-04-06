@@ -3,6 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
+
+	"github.com/mitchellh/mapstructure"
+
+	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"bitbucket.org/accezz-io/sac-operator/utils/typederror"
 
@@ -66,13 +71,13 @@ func (s *SiteServiceImpl) Reconcile(ctx context.Context, site *model.Site) (*Sit
 	for i := range connectors {
 		switch connectors[i].Status {
 		case connector_deployer.ToDeleteConnectorStatus:
-			output.UnHealthyConnectors = append(output.UnHealthyConnectors, Connectors{
+			output.UnHealthyConnectors = append(output.UnHealthyConnectors, Connector{
 				CreatedTimestamp: connectors[i].CreatedTimeStamp,
 				DeploymentName:   connectors[i].DeploymentName,
 				SacID:            connectors[i].SACID,
 			})
 		case connector_deployer.OKConnectorStatus:
-			output.HealthyConnectors = append(output.HealthyConnectors, Connectors{
+			output.HealthyConnectors = append(output.HealthyConnectors, Connector{
 				CreatedTimestamp: connectors[i].CreatedTimeStamp,
 				DeploymentName:   connectors[i].DeploymentName,
 				SacID:            connectors[i].SACID,
@@ -105,7 +110,7 @@ func (s *SiteServiceImpl) Reconcile(ctx context.Context, site *model.Site) (*Sit
 			if err != nil {
 				return output, err
 			}
-			output.HealthyConnectors = append(output.HealthyConnectors, connector)
+			output.HealthyConnectors = append(output.HealthyConnectors, *connector)
 		}
 	case len(output.HealthyConnectors) > site.NumberOfConnectors:
 		numberOfConnectorsToDelete := len(output.HealthyConnectors) - site.NumberOfConnectors
@@ -193,9 +198,9 @@ func (s *SiteServiceImpl) reconcilerDanglingConnectorsFromSAC(ctx context.Contex
 
 }
 
-func (s *SiteServiceImpl) createConnector(ctx context.Context, site *model.Site) (Connectors, error) {
+func (s *SiteServiceImpl) createConnector(ctx context.Context, site *model.Site) (*Connector, error) {
 
-	connector := Connectors{}
+	connector := &Connector{}
 
 	siteDto, err := s.sacClient.FindSiteByName(site.Name)
 	if err != nil {
@@ -209,7 +214,10 @@ func (s *SiteServiceImpl) createConnector(ctx context.Context, site *model.Site)
 	connector.SacID = sacConnector.ID
 	s.log.WithValues("id", sacConnector.ID, "name", sacConnector.Name).Info("created connector in sac")
 
-	deployConnectorInput := s.getDeployConnectorInputs(sacConnector, site)
+	deployConnectorInput, err := s.getDeployConnectorInputs(sacConnector, site)
+	if err != nil {
+		return connector, err
+	}
 
 	deploymentName, err := s.connectorDeployer.CreateConnector(ctx, deployConnectorInput)
 	if err != nil {
@@ -222,22 +230,22 @@ func (s *SiteServiceImpl) createConnector(ctx context.Context, site *model.Site)
 
 }
 
-func (s *SiteServiceImpl) getDeployConnectorInputs(connector *dto.ConnectorObjects, site *model.Site) *connector_deployer.CreateConnectorInput {
+func (s *SiteServiceImpl) getDeployConnectorInputs(connector *dto.ConnectorObjects, site *model.Site) (*connector_deployer.CreateConnectorInput, error) {
 
-	envs := map[string]string{
-		"ENDPOINT_URL":           site.EndpointURL,
-		"TENANT_IDENTIFIER":      site.TenantIdentifier,
-		"HTTPS_SKIP_CERT_VERIFY": "true",
-		"OTP":                    connector.Otp,
+	dockerComposeDeploymentCommand, err := s.sacClient.GetConnectorDeploymentCommand(connector.ID)
+	if err != nil {
+		return nil, err
 	}
+
+	connectorDeploymentArgs, err := s.connectorDeploymentArgsFromCommand(dockerComposeDeploymentCommand)
 
 	return &connector_deployer.CreateConnectorInput{
 		ConnectorID:     connector.ID,
 		SiteName:        site.Name,
-		Image:           "luminate/connector:2.10.1", //TODO: waiting for https://jira.luminate.io/browse/AC-27957
-		Name:            connector.Name,
-		EnvironmentVars: envs,
-	}
+		Image:           connectorDeploymentArgs.Image, //TODO: waiting for https://jira.luminate.io/browse/AC-27957
+		Name:            connectorDeploymentArgs.ContainerName,
+		EnvironmentVars: connectorDeploymentArgs.EnvironmentVars,
+	}, nil
 }
 
 func (s *SiteServiceImpl) getConnectorName(site *model.Site) string {
@@ -262,4 +270,44 @@ func (s *SiteServiceImpl) deleteConnector(ctx context.Context, sacID, podName st
 
 	return nil
 
+}
+
+type ConnectorDeploymentArgs struct {
+	Image           string
+	ContainerName   string
+	EnvironmentVars map[string]string
+}
+
+func (s *SiteServiceImpl) connectorDeploymentArgsFromCommand(command *dto.ConnectorDeploymentCommand) (*ConnectorDeploymentArgs, error) {
+
+	args := &ConnectorDeploymentArgs{
+		EnvironmentVars: map[string]string{},
+	}
+	m := make(map[string]interface{})
+
+	if err := yaml.Unmarshal([]byte(command.DeploymentCommands), &m); err != nil {
+		return args, err
+	}
+
+	type tmpArgsObj struct {
+		Image           string   `mapstructure:"image"`
+		ContainerName   string   `mapstructure:"container_name"`
+		EnvironmentVars []string `mapstructure:"environment"`
+	}
+
+	tmpArgs := &tmpArgsObj{}
+
+	for s2 := range m {
+		if err := mapstructure.Decode(m[s2], tmpArgs); err != nil {
+			return args, err
+		}
+		args.Image = tmpArgs.Image
+		args.ContainerName = tmpArgs.ContainerName
+		for i := range tmpArgs.EnvironmentVars {
+			key, val := strings.Split(tmpArgs.EnvironmentVars[i], "=")[0], strings.Split(tmpArgs.EnvironmentVars[i], "=")[1]
+			args.EnvironmentVars[key] = val
+		}
+	}
+
+	return args, nil
 }
