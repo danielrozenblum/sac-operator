@@ -116,12 +116,12 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	applicationReconcilerLogger := ctrl.Log.WithName("application-reconcile")
-	err = (&access.ApplicationReconciler{
-		Client:               k8sManager.GetClient(),
-		Scheme:               k8sManager.GetScheme(),
-		ApplicationService:   service.NewApplicationServiceImpl(sacClient, applicationReconcilerLogger),
-		ApplicationConverter: converter.NewApplicationTypeConverter(),
-		Log:                  ctrl.Log.WithName("test-application-reconcile"),
+	err = (&access.HttpApplicationReconciler{
+		Client:             k8sManager.GetClient(),
+		Scheme:             k8sManager.GetScheme(),
+		ApplicationService: service.NewApplicationServiceImpl(sacClient, applicationReconcilerLogger),
+		ConverterToModel:   converter.NewHttpApplicationTypeConverter(),
+		Log:                ctrl.Log.WithName("test-application-reconcile"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

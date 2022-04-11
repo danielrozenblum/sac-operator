@@ -4,21 +4,49 @@ import (
 	"fmt"
 )
 
-type Application struct {
-	ID                    string
+type CommonApplicationParams struct {
 	Name                  string
-	Type                  ApplicationType
-	SubType               ApplicationSubType
-	InternalAddress       string
 	SiteName              string
-	AccessPoliciesNames   []string
-	ActivityPoliciesNames []string
-	SiteId                string
-	PoliciesIDS           []string
-	ToDelete              bool
 	IsVisible             bool
 	IsNotificationEnabled bool
 	Enabled               bool
+	AccessPoliciesNames   []string
+	ActivityPoliciesNames []string
+}
+
+type ConnectionSettings struct {
+	InternalAddress       string
+	Subdomain             string
+	CustomExternalAddress string
+	CustomRootPath        string
+	HealthUrl             string
+	HealthMethod          string
+	CustomSSLCertificate  string
+	WildcardPrivateKey    string
+}
+
+type HttpLinkTranslationSettings struct {
+	IsDefaultContentRewriteRulesEnabled bool
+	IsDefaultHeaderRewriteRulesEnabled  bool
+	UseExternalAddressForHostAndSni     bool
+	LinkedApplications                  []string
+}
+
+type HttpRequestCustomizationSettings struct {
+	HeaderCustomization map[string]string
+}
+
+type Application struct {
+	ID       string
+	Type     ApplicationType
+	SubType  ApplicationSubType
+	ToDelete bool
+
+	CommonApplicationParams
+
+	*ConnectionSettings
+	*HttpLinkTranslationSettings
+	*HttpRequestCustomizationSettings
 }
 
 func (a *Application) String() string {

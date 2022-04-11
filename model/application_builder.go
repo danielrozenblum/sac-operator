@@ -11,16 +11,22 @@ type ApplicationBuilder struct {
 func NewApplicationBuilder() *ApplicationBuilder {
 	applicationId := uuid.New().String()
 
+	common := CommonApplicationParams{
+		Name:                  "application-test",
+		SiteName:              "",
+		IsVisible:             false,
+		IsNotificationEnabled: false,
+		Enabled:               false,
+		AccessPoliciesNames:   []string{"access-policy-1", "access-policy-2"},
+		ActivityPoliciesNames: []string{},
+	}
+
 	return &ApplicationBuilder{
 		application: &Application{
-			ID:                    applicationId,
-			Name:                  "application-test",
-			Type:                  HTTP,
-			SubType:               DefaultSubType,
-			InternalAddress:       "http://1.1.1.1",
-			SiteName:              "site-test-1",
-			AccessPoliciesNames:   []string{"access-policy-1", "access-policy-2"},
-			ActivityPoliciesNames: []string{},
+			ID:                      applicationId,
+			Type:                    HTTP,
+			SubType:                 DefaultSubType,
+			CommonApplicationParams: common,
 		},
 	}
 }

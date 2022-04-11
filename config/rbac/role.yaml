@@ -9,7 +9,7 @@ rules:
 - apiGroups:
   - access.secure-access-cloud.symantec.com
   resources:
-  - applications
+  - httpapplications
   verbs:
   - create
   - delete
@@ -21,13 +21,13 @@ rules:
 - apiGroups:
   - access.secure-access-cloud.symantec.com
   resources:
-  - applications/finalizers
+  - httpapplications/finalizers
   verbs:
   - update
 - apiGroups:
   - access.secure-access-cloud.symantec.com
   resources:
-  - applications/status
+  - httpapplications/status
   verbs:
   - get
   - patch

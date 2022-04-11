@@ -23,4 +23,13 @@ resources:
   kind: Application
   path: bitbucket.org/accezz-io/sac-operator/apis/access/v1
   version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: secure-access-cloud.symantec.com
+  group: access
+  kind: HttpApplication
+  path: bitbucket.org/accezz-io/sac-operator/apis/access/v1
+  version: v1
 version: "3"

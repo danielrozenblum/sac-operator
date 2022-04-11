@@ -125,14 +125,14 @@ func main() {
 		os.Exit(1)
 	}
 	applicationReconcilerLogger := ctrl.Log.WithName("application-reconcile")
-	if err = (&accesscontrollers.ApplicationReconciler{
-		Client:               mgr.GetClient(),
-		Scheme:               mgr.GetScheme(),
-		ApplicationConverter: converter.NewApplicationTypeConverter(),
-		ApplicationService:   service.NewApplicationServiceImpl(sacClient, applicationReconcilerLogger),
-		Log:                  applicationReconcilerLogger,
+	if err = (&accesscontrollers.HttpApplicationReconciler{
+		Client:             mgr.GetClient(),
+		Scheme:             mgr.GetScheme(),
+		ApplicationService: service.NewApplicationServiceImpl(sacClient, applicationReconcilerLogger),
+		ConverterToModel:   converter.NewHttpApplicationTypeConverter(),
+		Log:                applicationReconcilerLogger,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Application")
+		setupLog.Error(err, "unable to create controller", "controller", "HttpApplication")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

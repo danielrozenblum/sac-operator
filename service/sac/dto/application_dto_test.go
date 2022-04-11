@@ -13,14 +13,13 @@ func TestConvertFromApplicationModel(t *testing.T) {
 	applicationModel := model.NewApplicationBuilder().WithName(name).Build()
 
 	// when
-	result := FromApplicationModel(applicationModel)
+	result, _ := FromApplicationModel(applicationModel)
 
 	// then
 	assert.Equal(t, applicationModel.ID, result.ID)
 	assert.Equal(t, name, result.Name)
 	assert.Equal(t, applicationModel.Type, result.Type)
 	assert.Equal(t, applicationModel.SubType, result.SubType)
-	assert.Equal(t, applicationModel.InternalAddress, result.ConnectionSettings.InternalAddress)
 }
 
 //func TestConvertToApplicationModel(t *testing.T) {
@@ -46,7 +45,7 @@ func TestMergeApplication(t *testing.T) {
 	updatedApplicationDTO := NewApplicationDTOBuilder().WithName("new-name").Build()
 
 	// when
-	result := MergeApplication(existingApplicationDTO, updatedApplicationDTO)
+	result := MergeApplication(existingApplicationDTO, updatedApplicationDTO, MergeOptions{})
 
 	// then
 	assert.Equal(t, existingApplicationDTO.ID, result.ID)

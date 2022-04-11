@@ -18,7 +18,7 @@ func NewApplicationDTOBuilder() *ApplicationDTOBuilder {
 		Type:                  model.DefaultType,
 		SubType:               model.DefaultSubType,
 		ConnectionSettings:    ConnectionSettingsDTO{},
-		Icon:                  "",
+		IconUrl:               "",
 		IsVisible:             true,
 		IsNotificationEnabled: true,
 		Enabled:               true,

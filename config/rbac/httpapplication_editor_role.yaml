@@ -1,0 +1,24 @@
+# permissions for end users to edit httpapplications.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: httpapplication-editor-role
+rules:
+- apiGroups:
+  - access.secure-access-cloud.symantec.com
+  resources:
+  - httpapplications
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - access.secure-access-cloud.symantec.com
+  resources:
+  - httpapplications/status
+  verbs:
+  - get
