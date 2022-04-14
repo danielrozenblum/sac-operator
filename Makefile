@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= luminate/sac-operator:latest
+IMG ?= registry.hub.docker.com/luminate/sac-operator:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -66,7 +66,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 mocks: ## Run go generate against code.
 	go generate ./...
 
-docker-build: test ## Build docker image with the manager.
+docker-build: ## Build docker image with the manager.
 	docker build -t ${IMG} .
 
 docker-push: ## Push docker image with the manager.
