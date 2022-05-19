@@ -1,0 +1,27 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ adding-git-actions,main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: setup go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+    - name: run test
+      run: make test
+      env:
+        SAC_TENANT_DOMAIN: ${{ secrets.SAC_TENANT_DOMAIN }}
+        SAC_CLIENT_ID: ${{ secrets.SAC_CLIENT_ID }}
+        SAC_CLIENT_SECRET: ${{ secrets.SAC_CLIENT_SECRET }}
+    - name: build image
+      run: make docker-build
+    - name: login to image registry
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+    - name: push image
+      run: make docker-push

@@ -202,9 +202,11 @@ func TestSecureAccessCloudClientImpl_GetConnectorDeploymentCommand(t *testing.T)
 	defer tearDown(t)
 
 	site := &dto.SiteDTO{
-		ID:   "4a4b2b2b-0f87-479a-af05-5aa6d5580570",
 		Name: "integration-test-site",
 	}
+	result, err := sacClientTest.client.FindSiteByName(site.Name)
+
+	site.ID = result.ID
 	connectorName := fmt.Sprintf("test-%s", rand.String(4))
 	connector, err := sacClientTest.client.CreateConnector(site, connectorName)
 	assert.Nil(t, err)

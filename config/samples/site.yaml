@@ -1,7 +1,6 @@
 apiVersion: access.secure-access-cloud.symantec.com/v1
 kind: Site
 metadata:
-  name: sedsac-internal-operator
+  name: my-site
 spec:
   number_of_connectors: 3
-  image_pull_secret: regsecret

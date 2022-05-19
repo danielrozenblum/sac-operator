@@ -1,5 +1,3 @@
-[![CircleCI](https://circleci.com/bb/accezz-io/sac-operator.svg?style=svg)](https://circleci.com/bb/accezz-io/sac-operator)
-
 # Secure-Access-Cloud Kubernetes Operator
 
 ## Introduction

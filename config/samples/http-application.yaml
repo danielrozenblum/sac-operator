@@ -1,0 +1,14 @@
+apiVersion: access.secure-access-cloud.symantec.com/v1
+kind: HttpApplication
+metadata:
+  name: my-application
+spec:
+  site: my-site
+  connection_settings:
+    custom_root_path: /internal/debug
+  access_policies:
+    - only-devops
+  service:
+    name: nginx
+    port: "8080"
+    namespace: default
