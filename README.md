@@ -32,7 +32,7 @@ api endpoint = your tenant URL Client Id = from step 1. Client Secret = from ste
 
 2. Clone the repository
 ```shell
->> git clone git@github.com:odedpriva/sac-operator.git
+>> git clone git@github.com:danielrozenblum/sac-operator
 >> cd sac-operator
 ```
 
@@ -43,16 +43,14 @@ api endpoint = your tenant URL Client Id = from step 1. Client Secret = from ste
 ```
 
 3. Create site
-- check the site [sample](config/samples/site.yaml)
+- Check the site [sample](config/samples/site.yaml)
 
 4. Create application
-- check the site [sample](config/samples/http-application.yaml)
+- check the application [sample](config/samples/http-application.yaml)
 
 ## Uninstall
 
-1. delete all resources related to the operator.
+1. Delete all resources related to the operator.
 ```shell
->> make undeploy
+>> make undeploy ## Uninstall CRDs and delete namespace secure-access-cloud-system in K8s cluster specified in ~/.kube/config. 
 ```
-
-## [Contributing](contributing.md)
