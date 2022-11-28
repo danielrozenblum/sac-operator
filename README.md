@@ -43,10 +43,13 @@ api endpoint = your tenant URL Client Id = from step 1. Client Secret = from ste
 ```
 
 3. Create site
+In the desired K8s cluster, apply kind:site .yaml
 - Check the site [sample](config/samples/site.yaml)
 
 4. Create application
+In the desired K8s cluster, apply kind:HttpApplication .yaml
 - Check the application [sample](config/samples/http-application.yaml)
+
 
 ## Uninstall
 
