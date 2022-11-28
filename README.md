@@ -8,7 +8,7 @@ Create and Govern the access to your K8s resources the same way you create them.
 
 Currently supporting 2 CRDs:
 
-1. Site
+1. Sites
 2. HTTP application
 
 ## Installing
@@ -16,6 +16,7 @@ Currently supporting 2 CRDs:
 1. In Secure-Access-Cloud admin portal:
  - Create an API Client - settings->API Clients->New
  - Assign API client to tenant roles - settings->Tenant Roles->Assign Roles->Tenanat Admin->Click add under the API Client created above
+   
    ![create-api!](assets/create-api.gif "create admin api")
 
 2. In the desired K8s cluster, create a generic secret that the operator will be using to access Secure-Access-Cloud
