@@ -4,9 +4,11 @@
 Create and Govern the access to your k8s resources the same way you create them.   
 [Secure-access-cloud](https://www.broadcom.com/products/cyber-security/network/web-protection/secure-access-cloud) custom Kubernetes controller makes it easy to expose Kubernetes services through SAC using k8s [CRDs](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/)
 
+## Usage
+
 Currently supporting 2 CRDs:
 
-1. site
+1. Site
 2. HTTP application
 
 ## Installing
