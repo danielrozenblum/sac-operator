@@ -46,7 +46,7 @@ api endpoint = your tenant URL Client Id = from step 1. Client Secret = from ste
 - Check the site [sample](config/samples/site.yaml)
 
 4. Create application
-- check the application [sample](config/samples/http-application.yaml)
+- Check the application [sample](config/samples/http-application.yaml)
 
 ## Uninstall
 
