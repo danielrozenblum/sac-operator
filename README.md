@@ -9,7 +9,7 @@ Create and Govern the access to your K8s resources the same way you create them.
 Currently supporting 2 CRDs:
 
 1. Sites
-2. HTTP application
+2. Web application
 
 ## Installing
 
