@@ -27,7 +27,7 @@ Currently supporting 2 CRDs:
 --from-literal="clientId=<client Id>" \
 --from-literal="clientSecret=<client secret>"
 ```
-api endpoint = your tenant URL Client Id = from step 1. Client Secret = from step 1.
+api endpoint = your tenant URL , Client Id = from step 1 , Client Secret = from step 1
 
 
 2. Clone the repository
