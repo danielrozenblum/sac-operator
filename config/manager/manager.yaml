@@ -65,7 +65,6 @@ spec:
               secretKeyRef:
                 key: clientSecret
                 name: secure-access-cloud-config
-                # kubectl -n secure-access-cloud-system create secret generic secure-access-cloud-config --from-literal="tenantDomain=TENANT_DOMAIN" --from-literal="clientId=CLIENT_ID" --from-literal="clientSecret=CLIENT_SECRET"
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:
